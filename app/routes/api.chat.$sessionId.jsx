@@ -3,16 +3,27 @@ import prisma from "../db.server";
 import { runAgentLoop } from "../ai.server";
 import { getMainTheme, readThemeFile, listThemeFiles, shopifyGraphql } from "../theme.server";
 import { generateUnifiedDiff } from "../diff.server";
+import { executeProductTool } from "../tools/products/index.js";
 
 const NO_CONFIG_MSG =
   "No AI provider configured. Please go to **Settings** and add your API token.";
 
 const TOOL_STATUS = {
+  // Products
+  product_list: "Searching products…",
+  product_get: "Fetching product…",
+  product_create: "Creating product…",
+  product_update: "Updating product…",
+  product_delete: "Deleting product…",
+  product_variants_create: "Creating variants…",
+  product_variants_update: "Updating variants…",
+  // Theme
   get_current_datetime: "Checking current date…",
   get_active_theme: "Checking active theme…",
   list_theme_files: "Listing theme files…",
   read_theme_file: "Reading theme file…",
   propose_file_change: "Creating proposal…",
+  // Generic GraphQL
   shopify_graphql_query: "Querying store data…",
   shopify_graphql_mutation: "Applying change…",
 };
@@ -73,6 +84,11 @@ export const action = async ({ request, params }) => {
 
       const executeTool = async (name, args) => {
         console.log(`[chat/${sessionId}] tool →`, name, JSON.stringify(args).slice(0, 120));
+
+        // Product tools
+        const productResult = await executeProductTool(name, args, { shop, accessToken, shopifyGraphql });
+        if (productResult !== null) return productResult;
+
         if (name === "get_current_datetime") {
           const now = new Date();
           return {

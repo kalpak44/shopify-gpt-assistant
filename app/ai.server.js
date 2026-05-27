@@ -1,9 +1,10 @@
 import { readFileSync, readdirSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import { PRODUCT_TOOL_DEFS } from "./tools/products/index.js";
 
 const _dir = dirname(fileURLToPath(import.meta.url));
-const KNOWLEDGE_DIR = join(_dir, "knowledge");
+const KNOWLEDGE_DIR = join(_dir, "..", "docs", "2026-04");
 
 function loadKnowledge() {
   try {
@@ -42,6 +43,9 @@ ${loadKnowledge()}`;
 // ─── Normalized tool definitions ─────────────────────────────────────────────
 
 const TOOL_DEFS = [
+  // Product CRUD — app/tools/products
+  ...PRODUCT_TOOL_DEFS,
+
   {
     name: "get_current_datetime",
     description:

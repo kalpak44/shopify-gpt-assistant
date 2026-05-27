@@ -1,6 +1,6 @@
 # Project Conventions
 
-- Shopify Admin GraphQL API is the primary integration layer — see `docs/` for field references
+- Shopify Admin GraphQL API is the primary integration layer — see `app/knowledge` for field references
 - Chat messages are processed server-side; Claude interprets intent and maps it to GraphQL operations
 - All Shopify API mutations must be idempotent where possible
 - Auth is handled via Shopify's OAuth flow (`shopify.app.toml`)

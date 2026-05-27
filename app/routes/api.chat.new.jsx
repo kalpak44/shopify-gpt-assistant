@@ -1,9 +1,10 @@
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 import { runAgentLoop, generateSessionTitle } from "../ai.server";
-import { getMainTheme, readThemeFile, listThemeFiles, shopifyGraphql } from "../theme.server";
-import { generateUnifiedDiff } from "../diff.server";
+import { getMainTheme, shopifyGraphql } from "../theme.server";
 import { executeProductTool } from "../tools/products/index.js";
+import { executeThemeTool } from "../tools/themes/index.js";
+import { executeGraphqlTool } from "../tools/graphql/index.js";
 
 const DEBUG = process.env.DEBUGG === "true";
 
@@ -94,47 +95,27 @@ export const action = async ({ request }) => {
       let debugSeq = 0;
 
       const executeToolImpl = async (name, args) => {
-        // Product tools
+        // Product tools — app/tools/products
         const productResult = await executeProductTool(name, args, { shop, accessToken, shopifyGraphql });
         if (productResult !== null) return productResult;
 
-        if (name === "get_current_datetime") {
-          const now = new Date();
-          return { iso: now.toISOString(), utcOffset: 0, readable: now.toUTCString() };
-        }
-        if (name === "get_active_theme") {
-          const theme = await getTheme();
-          return { id: theme.id, name: theme.name };
-        }
-        if (name === "list_theme_files") {
-          const theme = await getTheme();
-          return listThemeFiles(shop, accessToken, theme.id, args.prefix ?? null);
-        }
-        if (name === "read_theme_file") {
-          const theme = await getTheme();
-          return (await readThemeFile(shop, accessToken, theme.id, args.path)) ?? `File not found: ${args.path}`;
-        }
-        if (name === "propose_file_change") {
-          const theme = await getTheme();
-          const before = (await readThemeFile(shop, accessToken, theme.id, args.path)) ?? "";
-          const diff = generateUnifiedDiff(before, args.new_content, args.path);
-          const proposal = await prisma.changeProposal.create({
-            data: { sessionId, shop, themeId: theme.id, status: "pending", summary: args.summary, files: [{ path: args.path, before, after: args.new_content, diff }] },
-          });
-          createdProposalId = proposal.id;
-          send({ type: "proposal", proposalId: proposal.id, summary: args.summary, files: [{ path: args.path, diff }] });
-          return { success: true, message: "Proposal created and shown to the merchant for review." };
-        }
-        if (name === "shopify_graphql_query") {
-          const { data, errors } = await shopifyGraphql(shop, accessToken, args.query, args.variables ?? {});
-          if (errors?.length) return { error: errors.map((e) => e.message).join(", ") };
-          return data;
-        }
-        if (name === "shopify_graphql_mutation") {
-          const { data, errors } = await shopifyGraphql(shop, accessToken, args.mutation, args.variables ?? {});
-          if (errors?.length) return { error: errors.map((e) => e.message).join(", ") };
-          return data;
-        }
+        // Theme + datetime tools — app/tools/themes
+        const themeResult = await executeThemeTool(name, args, {
+          shop,
+          accessToken,
+          getTheme,
+          sessionId,
+          onProposal: ({ proposalId, summary, files }) => {
+            createdProposalId = proposalId;
+            send({ type: "proposal", proposalId, summary, files });
+          },
+        });
+        if (themeResult !== null) return themeResult;
+
+        // Generic GraphQL passthrough — app/tools/graphql
+        const graphqlResult = await executeGraphqlTool(name, args, { shop, accessToken, shopifyGraphql });
+        if (graphqlResult !== null) return graphqlResult;
+
         return { error: `Unknown tool: ${name}` };
       };
 

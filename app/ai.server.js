@@ -2,6 +2,8 @@ import { readFileSync, readdirSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { PRODUCT_TOOL_DEFS } from "./tools/products/index.js";
+import { THEME_TOOL_DEFS } from "./tools/themes/index.js";
+import { GRAPHQL_TOOL_DEFS } from "./tools/graphql/index.js";
 
 const _dir = dirname(fileURLToPath(import.meta.url));
 const KNOWLEDGE_DIR = join(_dir, "..", "docs", "2026-04");
@@ -43,108 +45,9 @@ ${loadKnowledge()}`;
 // ─── Normalized tool definitions ─────────────────────────────────────────────
 
 export const TOOL_DEFS = [
-  // Product CRUD — app/tools/products
-  ...PRODUCT_TOOL_DEFS,
-
-  {
-    name: "get_current_datetime",
-    description:
-      "Get the current date and time on the server. Call this whenever the merchant's question involves relative time — 'today', 'this week', 'yesterday', 'last month', etc. — so you can construct accurate date-range filters in GraphQL queries.",
-    parameters: { type: "object", properties: {}, required: [] },
-  },
-  {
-    name: "get_active_theme",
-    description: "Get the name and ID of the merchant's currently active Shopify theme.",
-    parameters: { type: "object", properties: {}, required: [] },
-  },
-  {
-    name: "list_theme_files",
-    description:
-      "List filenames in the active Shopify theme. Optionally filter by a directory prefix such as 'sections/', 'templates/', 'snippets/', 'assets/', 'config/', 'layout/', or 'locales/'. Returns filenames only — use read_theme_file to get the content of a specific file. Call this first to discover what sections, templates, and other files exist before reading or modifying them.",
-    parameters: {
-      type: "object",
-      properties: {
-        prefix: {
-          type: "string",
-          description:
-            "Optional path prefix to filter results, e.g. 'sections/', 'templates/', 'config/'. Omit to list all files.",
-        },
-      },
-      required: [],
-    },
-  },
-  {
-    name: "read_theme_file",
-    description:
-      "Read the content of a file from the active Shopify theme. Use this to understand the current state before proposing changes.",
-    parameters: {
-      type: "object",
-      properties: {
-        path: {
-          type: "string",
-          description:
-            "File path relative to the theme root, e.g. templates/index.json or sections/header.liquid",
-        },
-      },
-      required: ["path"],
-    },
-  },
-  {
-    name: "propose_file_change",
-    description:
-      "Propose a change to a theme file. Creates a diff the merchant must review and approve before it is written. Always read the file first so the proposal reflects the actual current content.",
-    parameters: {
-      type: "object",
-      properties: {
-        path: { type: "string", description: "File path to modify" },
-        new_content: {
-          type: "string",
-          description: "The complete new content for the file (not a diff — the full updated file)",
-        },
-        summary: {
-          type: "string",
-          description: "Brief human-readable description of what this change does",
-        },
-      },
-      required: ["path", "new_content", "summary"],
-    },
-  },
-  {
-    name: "shopify_graphql_query",
-    description:
-      "Run any Shopify Admin GraphQL query to read store data — orders, products, customers, discounts, metaobjects, inventory, markets, finances, analytics, fulfillments, shipping, gift cards, reports, etc. Construct a valid GraphQL query and optionally pass variables.",
-    parameters: {
-      type: "object",
-      properties: {
-        query: { type: "string", description: "The GraphQL query string" },
-        variables: {
-          type: "object",
-          description: "Optional query variables",
-        },
-      },
-      required: ["query"],
-    },
-  },
-  {
-    name: "shopify_graphql_mutation",
-    description:
-      "Run a Shopify Admin GraphQL mutation to create, update, or delete store data. IMPORTANT: you MUST describe the change to the merchant and receive explicit confirmation in the conversation before calling this tool. Never run destructive mutations (delete, cancel, refund, bulk delete) without clear merchant approval.",
-    parameters: {
-      type: "object",
-      properties: {
-        mutation: { type: "string", description: "The GraphQL mutation string" },
-        variables: {
-          type: "object",
-          description: "Optional mutation variables",
-        },
-        summary: {
-          type: "string",
-          description: "One-sentence description of what this mutation does, shown to the merchant",
-        },
-      },
-      required: ["mutation", "summary"],
-    },
-  },
+  ...PRODUCT_TOOL_DEFS, // app/tools/products
+  ...THEME_TOOL_DEFS,   // app/tools/themes
+  ...GRAPHQL_TOOL_DEFS, // app/tools/graphql
 ];
 
 // ─── OpenAI-compatible agent loop ────────────────────────────────────────────

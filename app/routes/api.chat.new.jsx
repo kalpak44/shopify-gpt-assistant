@@ -5,6 +5,21 @@ import { getMainTheme, readThemeFile, listThemeFiles, shopifyGraphql } from "../
 import { generateUnifiedDiff } from "../diff.server";
 import { executeProductTool } from "../tools/products/index.js";
 
+const DEBUG = process.env.DEBUGG === "true";
+
+function limitResult(result) {
+  if (result === null || result === undefined) return result;
+  if (typeof result === "string")
+    return result.length > 2000 ? result.slice(0, 2000) + "…[truncated]" : result;
+  const json = JSON.stringify(result);
+  if (json.length > 4000) {
+    if (Array.isArray(result))
+      return { _note: `Array[${result.length}] — showing first 3`, _preview: result.slice(0, 3) };
+    return { _note: "Result truncated", _preview: json.slice(0, 2000) };
+  }
+  return result;
+}
+
 const NO_CONFIG_MSG =
   "No AI provider configured. Please go to **Settings** and add your API token.";
 
@@ -76,7 +91,9 @@ export const action = async ({ request }) => {
         return cachedTheme;
       };
 
-      const executeTool = async (name, args) => {
+      let debugSeq = 0;
+
+      const executeToolImpl = async (name, args) => {
         // Product tools
         const productResult = await executeProductTool(name, args, { shop, accessToken, shopifyGraphql });
         if (productResult !== null) return productResult;
@@ -119,6 +136,21 @@ export const action = async ({ request }) => {
           return data;
         }
         return { error: `Unknown tool: ${name}` };
+      };
+
+      const executeTool = async (name, args) => {
+        const seq = ++debugSeq;
+        console.log(`[chat/new→${sessionId}] tool →`, name, JSON.stringify(args).slice(0, 120));
+        if (DEBUG) send({ type: "debug", kind: "call", tool: name, args, seq });
+        const t0 = Date.now();
+        try {
+          const result = await executeToolImpl(name, args);
+          if (DEBUG) send({ type: "debug", kind: "result", tool: name, result: limitResult(result), durationMs: Date.now() - t0, seq });
+          return result;
+        } catch (err) {
+          if (DEBUG) send({ type: "debug", kind: "error", tool: name, error: err.message, durationMs: Date.now() - t0, seq });
+          throw err;
+        }
       };
 
       if (!config?.apiToken) {

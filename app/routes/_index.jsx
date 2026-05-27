@@ -68,6 +68,23 @@ export default function Index() {
           </div>
           <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
             <Link
+              to="/assistant/debug"
+              style={{
+                padding: "8px 14px",
+                fontSize: "14px",
+                fontWeight: 500,
+                color: "#6d7175",
+                background: "#f6f6f7",
+                border: "1px solid #e1e3e5",
+                borderRadius: "8px",
+                textDecoration: "none",
+                lineHeight: "20px",
+                display: "inline-block",
+              }}
+            >
+              🐛 Debug
+            </Link>
+            <Link
               to="/assistant/settings"
               style={{
                 padding: "8px 14px",

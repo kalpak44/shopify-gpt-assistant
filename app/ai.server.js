@@ -42,7 +42,7 @@ ${loadKnowledge()}`;
 
 // ─── Normalized tool definitions ─────────────────────────────────────────────
 
-const TOOL_DEFS = [
+export const TOOL_DEFS = [
   // Product CRUD — app/tools/products
   ...PRODUCT_TOOL_DEFS,
 

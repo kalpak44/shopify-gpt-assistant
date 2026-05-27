@@ -47,6 +47,7 @@ export const loader = async ({ request, params }) => {
     chatSession,
     messages,
     proposalMap,
+    debugEnabled: process.env.DEBUGG === "true",
   };
 };
 
@@ -360,10 +361,260 @@ function InlineProposalCard({ proposal, actionError, isSubmitting }) {
   );
 }
 
+// ─── DebugPanel ───────────────────────────────────────────────────────────────
+
+function ToolCallEntry({ call }) {
+  const [expandArgs, setExpandArgs] = useState(false);
+  const [expandResult, setExpandResult] = useState(false);
+
+  const isPending = call.status === "pending";
+  const isError   = call.status === "error";
+  const isOk      = call.status === "ok";
+
+  const badgeBg = isPending ? "#6d7175" : isError ? "#d72c0d" : "#008060";
+  const statusIcon = isPending ? "⏳" : isError ? "✗" : "✓";
+
+  const btnStyle = {
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    width: "100%",
+    padding: "5px 10px",
+    background: "none",
+    border: "none",
+    borderTop: "1px solid #e1e3e5",
+    cursor: "pointer",
+    fontFamily: "inherit",
+    fontSize: "11px",
+    color: "#6d7175",
+    textAlign: "left",
+  };
+
+  return (
+    <div
+      style={{
+        marginBottom: "6px",
+        border: `1px solid ${isError ? "#f5c6cb" : "#e1e3e5"}`,
+        borderRadius: "6px",
+        overflow: "hidden",
+        background: isError ? "#fff8f8" : "#fff",
+        fontSize: "12px",
+      }}
+    >
+      {/* Header row */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          padding: "6px 10px",
+          background: isError ? "#ffeef0" : "#f6f6f7",
+        }}
+      >
+        <span
+          style={{
+            padding: "1px 7px",
+            borderRadius: "4px",
+            fontFamily: "'SFMono-Regular', Consolas, monospace",
+            fontSize: "10px",
+            fontWeight: 700,
+            background: badgeBg,
+            color: "#fff",
+            letterSpacing: "0.02em",
+          }}
+        >
+          {call.tool}
+        </span>
+        <span style={{ fontSize: "11px" }}>{statusIcon}</span>
+        {call.durationMs !== undefined && (
+          <span style={{ marginLeft: "auto", color: "#8c9196", fontSize: "10px" }}>
+            {call.durationMs}ms
+          </span>
+        )}
+      </div>
+
+      {/* Args toggle */}
+      {call.args && (
+        <>
+          <button style={btnStyle} onClick={() => setExpandArgs((v) => !v)}>
+            <span style={{ fontFamily: "monospace", marginRight: "2px" }}>{expandArgs ? "▾" : "▸"}</span>
+            args
+          </button>
+          {expandArgs && (
+            <pre
+              style={{
+                margin: 0,
+                padding: "8px 10px",
+                background: "#fafbfc",
+                fontSize: "10px",
+                fontFamily: "'SFMono-Regular', Consolas, monospace",
+                overflowX: "auto",
+                maxHeight: "200px",
+                overflowY: "auto",
+                lineHeight: "1.5",
+              }}
+            >
+              {JSON.stringify(call.args, null, 2)}
+            </pre>
+          )}
+        </>
+      )}
+
+      {/* Result / Error toggle */}
+      {(isOk || isError) && (
+        <>
+          <button
+            style={{ ...btnStyle, color: isError ? "#d72c0d" : "#6d7175" }}
+            onClick={() => setExpandResult((v) => !v)}
+          >
+            <span style={{ fontFamily: "monospace", marginRight: "2px" }}>{expandResult ? "▾" : "▸"}</span>
+            {isError ? "error" : "result"}
+          </button>
+          {expandResult && (
+            <pre
+              style={{
+                margin: 0,
+                padding: "8px 10px",
+                background: isError ? "#fff8f8" : "#fafbfc",
+                fontSize: "10px",
+                fontFamily: "'SFMono-Regular', Consolas, monospace",
+                overflowX: "auto",
+                maxHeight: "240px",
+                overflowY: "auto",
+                lineHeight: "1.5",
+                color: isError ? "#d72c0d" : "inherit",
+              }}
+            >
+              {isError ? call.error : JSON.stringify(call.result, null, 2)}
+            </pre>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+function DebugPanel({ calls, onClear }) {
+  const debugScrollRef = useRef(null);
+
+  useEffect(() => {
+    if (debugScrollRef.current) {
+      debugScrollRef.current.scrollTop = debugScrollRef.current.scrollHeight;
+    }
+  }, [calls]);
+
+  return (
+    <div
+      style={{
+        width: "340px",
+        flexShrink: 0,
+        borderLeft: "1px solid #e1e3e5",
+        background: "#fff",
+        display: "flex",
+        flexDirection: "column",
+        overflow: "hidden",
+      }}
+    >
+      {/* Panel header */}
+      <div
+        style={{
+          flexShrink: 0,
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          padding: "0 14px",
+          height: "40px",
+          background: "#f6f6f7",
+          borderBottom: "1px solid #e1e3e5",
+        }}
+      >
+        <span style={{ fontSize: "13px", fontWeight: 600, color: "#202223", flex: 1 }}>
+          🐛 Tool calls
+        </span>
+        <span
+          style={{
+            padding: "1px 6px",
+            borderRadius: "10px",
+            fontSize: "10px",
+            fontWeight: 600,
+            background: "#e1e3e5",
+            color: "#6d7175",
+          }}
+        >
+          {calls.length}
+        </span>
+        {calls.length > 0 && (
+          <button
+            onClick={onClear}
+            style={{
+              padding: "3px 8px",
+              fontSize: "11px",
+              color: "#6d7175",
+              background: "none",
+              border: "1px solid #e1e3e5",
+              borderRadius: "4px",
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
+      {/* Tool call list */}
+      <div
+        ref={debugScrollRef}
+        style={{
+          flex: 1,
+          overflowY: "auto",
+          padding: "10px",
+        }}
+      >
+        {calls.length === 0 ? (
+          <div
+            style={{
+              color: "#8c9196",
+              fontSize: "12px",
+              textAlign: "center",
+              paddingTop: "24px",
+              lineHeight: "1.6",
+            }}
+          >
+            <div style={{ fontSize: "20px", marginBottom: "8px" }}>🔍</div>
+            Send a message to see
+            <br />
+            tool activity here.
+          </div>
+        ) : (
+          calls.map((call, i) => <ToolCallEntry key={i} call={call} />)
+        )}
+      </div>
+
+      {/* Footer: link to tool inspector */}
+      <div
+        style={{
+          flexShrink: 0,
+          borderTop: "1px solid #e1e3e5",
+          padding: "8px 14px",
+          background: "#f6f6f7",
+        }}
+      >
+        <Link
+          to="/assistant/debug"
+          style={{ fontSize: "11px", color: "#6d7175", textDecoration: "none" }}
+        >
+          Tool inspector →
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AssistantSession() {
-  const { apiKey, chatSession, messages, proposalMap } = useLoaderData();
+  const { apiKey, chatSession, messages, proposalMap, debugEnabled } = useLoaderData();
   const actionData = useActionData();
   const navigation = useNavigation();
   const revalidator = useRevalidator();
@@ -375,6 +626,15 @@ export default function AssistantSession() {
   const [streamingText, setStreamingText] = useState(null);
   const [statusText, setStatusText] = useState(null);
   const [streamingProposal, setStreamingProposal] = useState(null);
+
+  // ── Debug state ──
+  const [showDebug, setShowDebug] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("gpt-debug-panel") === "1";
+    }
+    return false;
+  });
+  const [debugCalls, setDebugCalls] = useState([]);
 
   const textareaRef = useRef(null);
   const scrollRef = useRef(null);
@@ -395,6 +655,14 @@ export default function AssistantSession() {
       setStreamingProposal(null);
     }
   }, [revalidator.state]);
+
+  const toggleDebug = () => {
+    const next = !showDebug;
+    setShowDebug(next);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("gpt-debug-panel", next ? "1" : "0");
+    }
+  };
 
   const handleSend = async (e) => {
     e.preventDefault();
@@ -441,6 +709,29 @@ export default function AssistantSession() {
               setIsSending(false);
               waitingRevalidateRef.current = true;
               revalidator.revalidate();
+            } else if (evt.type === "debug") {
+              if (evt.kind === "call") {
+                setDebugCalls((prev) => [
+                  ...prev,
+                  { seq: evt.seq, tool: evt.tool, args: evt.args, status: "pending" },
+                ]);
+              } else if (evt.kind === "result") {
+                setDebugCalls((prev) =>
+                  prev.map((c) =>
+                    c.seq === evt.seq
+                      ? { ...c, status: "ok", result: evt.result, durationMs: evt.durationMs }
+                      : c
+                  )
+                );
+              } else if (evt.kind === "error") {
+                setDebugCalls((prev) =>
+                  prev.map((c) =>
+                    c.seq === evt.seq
+                      ? { ...c, status: "error", error: evt.error, durationMs: evt.durationMs }
+                      : c
+                  )
+                );
+              }
             }
           } catch {
             // ignore malformed SSE line
@@ -499,100 +790,133 @@ export default function AssistantSession() {
             ← Back
           </Link>
           <span style={{ color: "#e1e3e5" }}>|</span>
-          <span style={{ fontSize: "15px", fontWeight: 600, color: "#202223" }}>
+          <span style={{ fontSize: "15px", fontWeight: 600, color: "#202223", flex: 1 }}>
             {chatSession.title || "Assistant GPT"}
           </span>
+
+          {/* Debug toggle — only visible when DEBUGG=true */}
+          {debugEnabled && (
+            <button
+              onClick={toggleDebug}
+              title={showDebug ? "Hide debug panel" : "Show debug panel"}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+                padding: "5px 10px",
+                fontSize: "12px",
+                fontWeight: 600,
+                color: showDebug ? "#008060" : "#6d7175",
+                background: showDebug ? "#e8f5f0" : "transparent",
+                border: `1px solid ${showDebug ? "#008060" : "#e1e3e5"}`,
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                transition: "all 0.15s",
+              }}
+            >
+              🐛 Debug
+            </button>
+          )}
         </div>
 
-        {/* ── Messages ── */}
-        <div
-          ref={scrollRef}
-          style={{
-            flex: 1,
-            overflowY: "auto",
-            padding: "28px 0",
-          }}
-        >
-          <div style={{ maxWidth: "760px", margin: "0 auto", padding: "0 24px" }}>
+        {/* ── Body (messages + optional debug panel) ── */}
+        <div style={{ flex: 1, overflow: "hidden", display: "flex" }}>
+          {/* Messages */}
+          <div
+            ref={scrollRef}
+            style={{
+              flex: 1,
+              overflowY: "auto",
+              padding: "28px 0",
+            }}
+          >
+            <div style={{ maxWidth: "760px", margin: "0 auto", padding: "0 24px" }}>
 
-            {messages.length === 0 && pendingUserMessage === null && (
-              <div style={{ color: "#6d7175", fontSize: "14px", textAlign: "center", padding: "40px 0" }}>
-                <div style={{ fontSize: "28px", marginBottom: "12px" }}>🤖</div>
-                <p style={{ margin: "0 0 6px", fontWeight: 500, color: "#202223" }}>Assistant GPT</p>
-                <p style={{ margin: 0, fontSize: "13px" }}>
-                  Ask me anything about your store — themes, products, orders, customers, and more.
-                </p>
-              </div>
-            )}
+              {messages.length === 0 && pendingUserMessage === null && (
+                <div style={{ color: "#6d7175", fontSize: "14px", textAlign: "center", padding: "40px 0" }}>
+                  <div style={{ fontSize: "28px", marginBottom: "12px" }}>🤖</div>
+                  <p style={{ margin: "0 0 6px", fontWeight: 500, color: "#202223" }}>Assistant GPT</p>
+                  <p style={{ margin: 0, fontSize: "13px" }}>
+                    Ask me anything about your store — themes, products, orders, customers, and more.
+                  </p>
+                </div>
+              )}
 
-            {/* DB messages */}
-            {messages.map((msg) => (
-              <div key={msg.id} style={{ marginBottom: "24px" }}>
-                {msg.role === "user" ? (
-                  <UserMessage content={msg.content} />
-                ) : (
-                  <AssistantMessage content={msg.content} />
-                )}
-                {msg.proposalId && proposalMap[msg.proposalId] && (
-                  <InlineProposalCard
-                    proposal={proposalMap[msg.proposalId]}
-                    actionError={
-                      pendingProposalIds.has(msg.proposalId) ? actionData?.error : null
-                    }
-                    isSubmitting={isFormSubmitting}
-                  />
-                )}
-              </div>
-            ))}
+              {/* DB messages */}
+              {messages.map((msg) => (
+                <div key={msg.id} style={{ marginBottom: "24px" }}>
+                  {msg.role === "user" ? (
+                    <UserMessage content={msg.content} />
+                  ) : (
+                    <AssistantMessage content={msg.content} />
+                  )}
+                  {msg.proposalId && proposalMap[msg.proposalId] && (
+                    <InlineProposalCard
+                      proposal={proposalMap[msg.proposalId]}
+                      actionError={
+                        pendingProposalIds.has(msg.proposalId) ? actionData?.error : null
+                      }
+                      isSubmitting={isFormSubmitting}
+                    />
+                  )}
+                </div>
+              ))}
 
-            {/* Optimistic user message */}
-            {pendingUserMessage !== null && (
-              <div style={{ marginBottom: "24px" }}>
-                <UserMessage content={pendingUserMessage} />
-              </div>
-            )}
+              {/* Optimistic user message */}
+              {pendingUserMessage !== null && (
+                <div style={{ marginBottom: "24px" }}>
+                  <UserMessage content={pendingUserMessage} />
+                </div>
+              )}
 
-            {/* Tool status */}
-            {statusText && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "8px",
-                  marginBottom: "12px",
-                  color: "#6d7175",
-                  fontSize: "12px",
-                }}
-              >
-                <span
+              {/* Tool status */}
+              {statusText && (
+                <div
                   style={{
-                    display: "inline-block",
-                    width: "12px",
-                    height: "12px",
-                    border: "2px solid #e1e3e5",
-                    borderTopColor: "#008060",
-                    borderRadius: "50%",
-                    animation: "spin 0.8s linear infinite",
-                    flexShrink: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    marginBottom: "12px",
+                    color: "#6d7175",
+                    fontSize: "12px",
                   }}
-                />
-                {statusText}
-              </div>
-            )}
-
-            {/* Streaming assistant message */}
-            {streamingText !== null && (
-              <div style={{ marginBottom: "24px" }}>
-                <AssistantMessage content={streamingText} streaming={isSending} />
-                {streamingProposal && (
-                  <InlineProposalCard
-                    proposal={streamingProposal}
-                    isSubmitting={isFormSubmitting}
+                >
+                  <span
+                    style={{
+                      display: "inline-block",
+                      width: "12px",
+                      height: "12px",
+                      border: "2px solid #e1e3e5",
+                      borderTopColor: "#008060",
+                      borderRadius: "50%",
+                      animation: "spin 0.8s linear infinite",
+                      flexShrink: 0,
+                    }}
                   />
-                )}
-              </div>
-            )}
+                  {statusText}
+                </div>
+              )}
+
+              {/* Streaming assistant message */}
+              {streamingText !== null && (
+                <div style={{ marginBottom: "24px" }}>
+                  <AssistantMessage content={streamingText} streaming={isSending} />
+                  {streamingProposal && (
+                    <InlineProposalCard
+                      proposal={streamingProposal}
+                      isSubmitting={isFormSubmitting}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* Debug panel */}
+          {debugEnabled && showDebug && (
+            <DebugPanel calls={debugCalls} onClear={() => setDebugCalls([])} />
+          )}
         </div>
 
         {/* ── Input ── */}

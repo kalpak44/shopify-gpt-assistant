@@ -3,14 +3,14 @@
 
 name = "Assistant GPT"
 client_id = "aa2e8ef1ecccc3b3abdae1a3b8a77ae6"
-application_url = "https://shopify-app-playground.pavel-usanli.online"
+application_url = "https://shopify-gpt-assistant.pavel-usanli.online"
 embedded = true
 
 [auth]
 redirect_urls = [
-    "https://shopify-app-playground.pavel-usanli.online/auth/callback",
-    "https://shopify-app-playground.pavel-usanli.online/auth/shopify/callback",
-    "https://shopify-app-playground.pavel-usanli.online/api/auth/callback"
+    "https://shopify-gpt-assistant.pavel-usanli.online/auth/callback",
+    "https://shopify-gpt-assistant.pavel-usanli.online/auth/shopify/callback",
+    "https://shopify-gpt-assistant.pavel-usanli.online/api/auth/callback"
 ]
 
 [webhooks]

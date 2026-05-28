@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { redirect, useLoaderData, useRouteError, Form, Link } from "react-router";
+import { redirect, useLoaderData, useActionData, useNavigation, useRouteError, Form, Link } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { AppProvider } from "@shopify/shopify-app-react-router/react";
 import { authenticate, BILLING_PLAN_PRO, BILLING_PLAN_ENTERPRISE } from "../shopify.server";
@@ -52,16 +52,27 @@ export const action = async ({ request }) => {
 
   // Paid plans — redirect to Shopify billing confirmation page
   const billingPlan = plan === "pro" ? BILLING_PLAN_PRO : BILLING_PLAN_ENTERPRISE;
-  const returnUrl = `${process.env.SHOPIFY_APP_URL}/assistant/billing/confirm`;
-  await billing.request({ plan: billingPlan, isTest: IS_TEST, returnUrl });
+  const appUrl = (process.env.SHOPIFY_APP_URL || "").replace(/\/$/, "");
+  const returnUrl = `${appUrl}/assistant/billing/confirm`;
+  try {
+    await billing.request({ plan: billingPlan, isTest: IS_TEST, returnUrl });
+  } catch (err) {
+    if (err instanceof Response) throw err; // billing.request redirects via thrown Response
+    const detail = err?.errorData ? JSON.stringify(err.errorData) : err?.message;
+    console.error("[billing] request failed:", detail);
+    return { error: `Billing error: ${detail ?? "unknown"}` };
+  }
 };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AssistantPlans() {
   const { apiKey, currentPlan, isOnboarding } = useLoaderData();
+  const actionData = useActionData();
+  const navigation = useNavigation();
+  const error = actionData?.error;
   const [selected, setSelected] = useState(currentPlan);
-  const [submitting, setSubmitting] = useState(false);
+  const submitting = navigation.state === "submitting";
 
   const plan = PLAN_DEFS[selected];
 
@@ -214,8 +225,15 @@ export default function AssistantPlans() {
           })}
         </div>
 
+        {/* ── Error message ── */}
+        {error && (
+          <p style={{ marginBottom: "12px", fontSize: "13px", color: "#d72c0d", maxWidth: "600px", textAlign: "center" }}>
+            {error}
+          </p>
+        )}
+
         {/* ── Confirm button ── */}
-        <Form method="post" onSubmit={() => setSubmitting(true)}>
+        <Form method="post">
           <input type="hidden" name="plan" value={selected} />
           <button
             type="submit"

@@ -204,7 +204,7 @@ export const action = async ({ request, params }) => {
         try {
           const result = await runAgentLoop({
             modelName,
-            scopes: session.scope,
+            scopes: subscription.aiScopes ?? session.scope,
             history,
             executeTool,
             onChunk: (text) => send({ type: "chunk", text }),

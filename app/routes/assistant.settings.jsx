@@ -84,6 +84,38 @@ export default function AssistantSettings() {
           <h1 style={{ fontSize: "22px", fontWeight: 600, margin: 0 }}>Settings</h1>
         </div>
 
+        {/* ── AI Permissions link ── */}
+        <section style={{ marginBottom: "28px" }}>
+          <h2 style={{ fontSize: "11px", fontWeight: 600, margin: "0 0 14px", color: "#6d7175", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+            AI Access
+          </h2>
+          <div style={{ border: "1px solid #e1e3e5", borderRadius: "10px", background: "#fff", overflow: "hidden" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px" }}>
+              <div>
+                <div style={{ fontSize: "14px", fontWeight: 500, marginBottom: "2px" }}>Shopify permissions</div>
+                <div style={{ fontSize: "12px", color: "#6d7175" }}>
+                  Choose which Shopify resources the AI assistant is allowed to manage
+                </div>
+              </div>
+              <Link
+                to="/assistant/permissions"
+                style={{
+                  padding: "6px 14px",
+                  fontSize: "13px",
+                  fontWeight: 500,
+                  color: "#303030",
+                  background: "#f6f6f7",
+                  border: "1px solid #e1e3e5",
+                  borderRadius: "6px",
+                  textDecoration: "none",
+                }}
+              >
+                Manage →
+              </Link>
+            </div>
+          </div>
+        </section>
+
         {/* ── Subscription ── */}
         <section style={{ marginBottom: "28px" }}>
           <h2 style={{ fontSize: "15px", fontWeight: 600, margin: "0 0 14px", color: "#6d7175", textTransform: "uppercase", letterSpacing: "0.04em", fontSize: "11px" }}>

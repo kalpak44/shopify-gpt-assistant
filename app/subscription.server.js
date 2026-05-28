@@ -1,4 +1,10 @@
 import prisma from "./db.server.js";
+import { BILLING_PLAN_PRO, BILLING_PLAN_ENTERPRISE } from "./shopify.server.js";
+
+const SHOPIFY_PLAN_TO_ID = {
+  [BILLING_PLAN_PRO]: "pro",
+  [BILLING_PLAN_ENTERPRISE]: "enterprise",
+};
 
 /** Get existing subscription or auto-provision free tier for new shops. */
 export async function getOrCreateSubscription(shop) {
@@ -6,6 +12,30 @@ export async function getOrCreateSubscription(shop) {
     where: { shop },
     create: { shop, plan: "free", status: "active" },
     update: {},
+  });
+}
+
+/**
+ * Sync local DB from the appSubscriptions returned by billing.check().
+ * Call this after a billing confirmation or cancellation.
+ */
+export async function syncBillingToDb(shop, appSubscriptions) {
+  if (!appSubscriptions?.length) {
+    await prisma.subscription.upsert({
+      where: { shop },
+      create: { shop, plan: "free", status: "active", confirmedAt: new Date() },
+      update: { plan: "free", status: "cancelled" },
+    });
+    return;
+  }
+
+  const shopifySub = appSubscriptions[0];
+  const plan = SHOPIFY_PLAN_TO_ID[shopifySub.name] ?? "free";
+
+  await prisma.subscription.upsert({
+    where: { shop },
+    create: { shop, plan, status: "active", confirmedAt: new Date() },
+    update: { plan, status: "active", confirmedAt: new Date() },
   });
 }
 

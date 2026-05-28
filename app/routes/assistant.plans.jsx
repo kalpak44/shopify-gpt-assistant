@@ -2,10 +2,12 @@ import { useState } from "react";
 import { redirect, useLoaderData, useRouteError, Form, Link } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { AppProvider } from "@shopify/shopify-app-react-router/react";
-import { authenticate } from "../shopify.server";
+import { authenticate, BILLING_PLAN_PRO, BILLING_PLAN_ENTERPRISE } from "../shopify.server";
 import prisma from "../db.server";
 import { getOrCreateSubscription } from "../subscription.server.js";
 import { PLAN_DEFS, getPlanModel } from "../plans.js";
+
+const IS_TEST = process.env.NODE_ENV !== "production";
 
 // ─── Loader ──────────────────────────────────────────────────────────────────
 
@@ -22,7 +24,7 @@ export const loader = async ({ request }) => {
 // ─── Action ──────────────────────────────────────────────────────────────────
 
 export const action = async ({ request }) => {
-  const { session } = await authenticate.admin(request);
+  const { session, billing } = await authenticate.admin(request);
   const shop = session.shop;
   const formData = await request.formData();
   const plan = formData.get("plan")?.toString();
@@ -31,13 +33,27 @@ export const action = async ({ request }) => {
     return { error: "Invalid plan." };
   }
 
-  await prisma.subscription.upsert({
-    where: { shop },
-    create: { shop, plan, status: "active", confirmedAt: new Date() },
-    update: { plan, status: "active", confirmedAt: new Date() },
-  });
+  if (plan === "free") {
+    // Cancel any active Shopify paid subscription
+    const { appSubscriptions } = await billing.check({
+      plans: [BILLING_PLAN_PRO, BILLING_PLAN_ENTERPRISE],
+      isTest: IS_TEST,
+    });
+    for (const sub of appSubscriptions) {
+      await billing.cancel({ subscriptionId: sub.id, prorate: true, isTest: IS_TEST });
+    }
+    await prisma.subscription.upsert({
+      where: { shop },
+      create: { shop, plan: "free", status: "active", confirmedAt: new Date() },
+      update: { plan: "free", status: "active", confirmedAt: new Date() },
+    });
+    throw redirect("/");
+  }
 
-  throw redirect("/");
+  // Paid plans — redirect to Shopify billing confirmation page
+  const billingPlan = plan === "pro" ? BILLING_PLAN_PRO : BILLING_PLAN_ENTERPRISE;
+  const returnUrl = `${process.env.SHOPIFY_APP_URL}/assistant/billing/confirm`;
+  await billing.request({ plan: billingPlan, isTest: IS_TEST, returnUrl });
 };
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -226,7 +242,7 @@ export default function AssistantPlans() {
         </Form>
 
         <p style={{ marginTop: "14px", fontSize: "12px", color: "#8c9196" }}>
-          Payment processing coming soon. No card required right now.
+          Billed through Shopify. Cancel anytime.
         </p>
       </div>
     </AppProvider>

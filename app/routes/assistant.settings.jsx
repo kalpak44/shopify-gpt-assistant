@@ -176,22 +176,21 @@ export default function AssistantSettings() {
                 <span style={{ fontSize: "13px", color: "#6d7175" }}>
                   Next billing: <strong style={{ color: "#202223" }}>{nextBillingStr}</strong>
                 </span>
-                <button
-                  disabled
-                  title="Payment integration coming soon"
+                <Link
+                  to="/assistant/plans"
                   style={{
                     padding: "5px 12px",
                     fontSize: "12px",
-                    color: "#8c9196",
+                    fontWeight: 500,
+                    color: "#303030",
                     background: "#fff",
                     border: "1px solid #e1e3e5",
                     borderRadius: "6px",
-                    cursor: "not-allowed",
-                    fontFamily: "inherit",
+                    textDecoration: "none",
                   }}
                 >
                   Manage billing
-                </button>
+                </Link>
               </div>
             )}
           </div>

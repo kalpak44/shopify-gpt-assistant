@@ -10,7 +10,8 @@ embedded = true
 redirect_urls = [
     "https://shopify-gpt-assistant.pavel-usanli.online/auth/callback",
     "https://shopify-gpt-assistant.pavel-usanli.online/auth/shopify/callback",
-    "https://shopify-gpt-assistant.pavel-usanli.online/api/auth/callback"
+    "https://shopify-gpt-assistant.pavel-usanli.online/api/auth/callback",
+    "https://shopify-gpt-assistant.pavel-usanli.online/assistant/billing/confirm"
 ]
 
 [webhooks]

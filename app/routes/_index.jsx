@@ -14,9 +14,6 @@ export const loader = async ({ request }) => {
     const { session } = await authenticate.admin(request);
     const shop = session.shop;
 
-    const url = new URL(request.url);
-    const ready = url.searchParams.get("ready") === "1";
-
     const [subscription, sessions] = await Promise.all([
       getOrCreateSubscription(shop),
       prisma.chatSession.findMany({
@@ -27,7 +24,7 @@ export const loader = async ({ request }) => {
       }),
     ]);
 
-    return { apiKey: process.env.SHOPIFY_API_KEY || "", sessions, subscription, ready };
+    return { apiKey: process.env.SHOPIFY_API_KEY || "", sessions, subscription };
   } catch (error) {
     if (error instanceof Response && error.status === 410) {
       throw redirect("/auth/login");
@@ -57,12 +54,11 @@ export const action = async ({ request }) => {
     if (["free", "pro", "enterprise"].includes(plan)) {
       await prisma.subscription.upsert({
         where: { shop },
-        create: { shop, plan, status: "active" },
-        update: { plan, status: "active" },
+        create: { shop, plan, status: "active", confirmedAt: new Date() },
+        update: { plan, status: "active", confirmedAt: new Date() },
       });
     }
-    // ?ready=1 tells the loader the user has explicitly picked a plan
-    throw redirect("/?ready=1");
+    throw redirect("/");
   }
 
   return null;
@@ -245,10 +241,10 @@ function PlanSelectionScreen({ currentPlanId }) {
 // ─── Main App Screen ──────────────────────────────────────────────────────────
 
 export default function Index() {
-  const { apiKey, sessions, subscription, ready } = useLoaderData();
+  const { apiKey, sessions, subscription } = useLoaderData();
   const [confirmId, setConfirmId] = useState(null);
 
-  const showNormalUI = ready || sessions.length > 0;
+  const showNormalUI = Boolean(subscription?.confirmedAt) || sessions.length > 0;
   const currentPlan = PLAN_DEFS[subscription?.plan] ?? PLAN_DEFS.free;
 
   return (

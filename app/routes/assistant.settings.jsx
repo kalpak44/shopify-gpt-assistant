@@ -41,8 +41,8 @@ export const action = async ({ request }) => {
     const { default: prisma } = await import("../db.server.js");
     await prisma.subscription.upsert({
       where: { shop },
-      create: { shop, plan, status: "active" },
-      update: { plan, status: "active" },
+      create: { shop, plan, status: "active", confirmedAt: new Date() },
+      update: { plan, status: "active", confirmedAt: new Date() },
     });
     return { success: true, plan };
   }

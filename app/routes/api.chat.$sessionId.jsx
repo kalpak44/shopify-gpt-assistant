@@ -1,10 +1,12 @@
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
-import { runAgentLoop } from "../ai.server";
+import { runAgentLoop, isAIConfigured } from "../ai.server";
 import { getMainTheme, shopifyGraphql } from "../theme.server";
 import { executeProductTool } from "../tools/products/index.js";
 import { executeThemeTool } from "../tools/themes/index.js";
 import { executeGraphqlTool } from "../tools/graphql/index.js";
+import { getOrCreateSubscription } from "../subscription.server.js";
+import { getPlanModel } from "../plans.js";
 
 const DEBUG = process.env.DEBUGG === "true";
 
@@ -23,7 +25,7 @@ function limitResult(result) {
 }
 
 const NO_CONFIG_MSG =
-  "No AI provider configured. Please go to **Settings** and add your API token.";
+  "The AI service is not configured. Please contact the app administrator.";
 
 const TOOL_STATUS = {
   // Products
@@ -72,14 +74,16 @@ export const action = async ({ request, params }) => {
     data: { sessionId, role: "user", content },
   });
 
-  const [config, history] = await Promise.all([
-    prisma.assistantConfig.findUnique({ where: { shop } }),
+  const [subscription, history] = await Promise.all([
+    getOrCreateSubscription(shop),
     prisma.chatMessage.findMany({
       where: { sessionId },
       orderBy: { createdAt: "asc" },
       take: 40,
     }),
   ]);
+
+  const modelName = getPlanModel(subscription.plan);
 
   const encoder = new TextEncoder();
   let cancelled = false;
@@ -159,7 +163,9 @@ export const action = async ({ request, params }) => {
         }
       };
 
-      if (!config?.apiToken) {
+      let agentUsage = null;
+
+      if (!isAIConfigured()) {
         for (const char of NO_CONFIG_MSG) {
           if (cancelled) break;
           send({ type: "chunk", text: char });
@@ -168,8 +174,8 @@ export const action = async ({ request, params }) => {
         fullText = NO_CONFIG_MSG;
       } else {
         try {
-          fullText = await runAgentLoop({
-            config,
+          const result = await runAgentLoop({
+            modelName,
             scopes: session.scope,
             history,
             executeTool,
@@ -178,13 +184,15 @@ export const action = async ({ request, params }) => {
               send({ type: "status", text: TOOL_STATUS[toolName] ?? `Running ${toolName}…` }),
             isCancelled: () => cancelled,
           });
+          fullText = result.text;
+          agentUsage = result.usage;
         } catch (err) {
           fullText = `**Error:** ${err.message}`;
           send({ type: "chunk", text: fullText });
         }
       }
 
-      await Promise.all([
+      const writes = [
         prisma.chatMessage.create({
           data: { sessionId, role: "assistant", content: fullText, proposalId: createdProposalId },
         }),
@@ -192,7 +200,22 @@ export const action = async ({ request, params }) => {
           where: { id: sessionId },
           data: { updatedAt: new Date() },
         }),
-      ]);
+      ];
+      if (agentUsage?.totalTokens > 0) {
+        writes.push(
+          prisma.tokenUsage.create({
+            data: {
+              shop,
+              sessionId,
+              model: modelName,
+              promptTokens: agentUsage.promptTokens,
+              completionTokens: agentUsage.completionTokens,
+              totalTokens: agentUsage.totalTokens,
+            },
+          })
+        );
+      }
+      await Promise.all(writes);
 
       send({ type: "done" });
       controller.close();

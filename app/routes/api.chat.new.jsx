@@ -1,10 +1,12 @@
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
-import { runAgentLoop, generateSessionTitle } from "../ai.server";
+import { runAgentLoop, generateSessionTitle, isAIConfigured } from "../ai.server";
 import { getMainTheme, shopifyGraphql } from "../theme.server";
 import { executeProductTool } from "../tools/products/index.js";
 import { executeThemeTool } from "../tools/themes/index.js";
 import { executeGraphqlTool } from "../tools/graphql/index.js";
+import { getOrCreateSubscription } from "../subscription.server.js";
+import { getPlanModel } from "../plans.js";
 
 const DEBUG = process.env.DEBUGG === "true";
 
@@ -22,10 +24,9 @@ function limitResult(result) {
 }
 
 const NO_CONFIG_MSG =
-  "No AI provider configured. Please go to **Settings** and add your API token.";
+  "The AI service is not configured. Please contact the app administrator.";
 
 const TOOL_STATUS = {
-  // Products
   product_list: "Searching products…",
   product_get: "Fetching product…",
   product_create: "Creating product…",
@@ -33,13 +34,11 @@ const TOOL_STATUS = {
   product_delete: "Deleting product…",
   product_variants_create: "Creating variants…",
   product_variants_update: "Updating variants…",
-  // Theme
   get_current_datetime: "Checking current date…",
   get_active_theme: "Checking active theme…",
   list_theme_files: "Listing theme files…",
   read_theme_file: "Reading theme file…",
   propose_file_change: "Creating proposal…",
-  // Generic GraphQL
   shopify_graphql_query: "Querying store data…",
   shopify_graphql_mutation: "Applying change…",
 };
@@ -64,14 +63,16 @@ export const action = async ({ request }) => {
     data: { sessionId, role: "user", content },
   });
 
-  const [config, history] = await Promise.all([
-    prisma.assistantConfig.findUnique({ where: { shop } }),
+  const [subscription, history] = await Promise.all([
+    getOrCreateSubscription(shop),
     prisma.chatMessage.findMany({
       where: { sessionId },
       orderBy: { createdAt: "asc" },
       take: 40,
     }),
   ]);
+
+  const modelName = getPlanModel(subscription.plan);
 
   const encoder = new TextEncoder();
   let cancelled = false;
@@ -86,20 +87,35 @@ export const action = async ({ request }) => {
       let fullText = "";
       let createdProposalId = null;
 
+      let debugSeq = 0;
+      let graphqlSeq = 0;
+
+      const instrumentedGraphql = async (s, t, query, variables = {}) => {
+        const seq = ++graphqlSeq;
+        const operation = query.match(/(?:query|mutation)\s+(\w+)/)?.[1] ?? "anonymous";
+        const opType = /^\s*mutation/i.test(query) ? "mutation" : "query";
+        if (DEBUG) send({ type: "debug", kind: "graphql_call", seq, operation, opType, query, variables });
+        const t0 = Date.now();
+        try {
+          const result = await shopifyGraphql(s, t, query, variables);
+          if (DEBUG) send({ type: "debug", kind: "graphql_result", seq, response: limitResult(result), durationMs: Date.now() - t0 });
+          return result;
+        } catch (err) {
+          if (DEBUG) send({ type: "debug", kind: "graphql_error", seq, error: err.message, durationMs: Date.now() - t0 });
+          throw err;
+        }
+      };
+
       let cachedTheme = null;
       const getTheme = async () => {
-        if (!cachedTheme) cachedTheme = await getMainTheme(shop, accessToken);
+        if (!cachedTheme) cachedTheme = await getMainTheme(shop, accessToken, instrumentedGraphql);
         return cachedTheme;
       };
 
-      let debugSeq = 0;
-
       const executeToolImpl = async (name, args) => {
-        // Product tools — app/tools/products
-        const productResult = await executeProductTool(name, args, { shop, accessToken, shopifyGraphql });
+        const productResult = await executeProductTool(name, args, { shop, accessToken, shopifyGraphql: instrumentedGraphql });
         if (productResult !== null) return productResult;
 
-        // Theme + datetime tools — app/tools/themes
         const themeResult = await executeThemeTool(name, args, {
           shop,
           accessToken,
@@ -109,11 +125,11 @@ export const action = async ({ request }) => {
             createdProposalId = proposalId;
             send({ type: "proposal", proposalId, summary, files });
           },
+          shopifyGraphql: instrumentedGraphql,
         });
         if (themeResult !== null) return themeResult;
 
-        // Generic GraphQL passthrough — app/tools/graphql
-        const graphqlResult = await executeGraphqlTool(name, args, { shop, accessToken, shopifyGraphql });
+        const graphqlResult = await executeGraphqlTool(name, args, { shop, accessToken, shopifyGraphql: instrumentedGraphql });
         if (graphqlResult !== null) return graphqlResult;
 
         return { error: `Unknown tool: ${name}` };
@@ -134,7 +150,9 @@ export const action = async ({ request }) => {
         }
       };
 
-      if (!config?.apiToken) {
+      let agentUsage = null;
+
+      if (!isAIConfigured()) {
         for (const char of NO_CONFIG_MSG) {
           if (cancelled) break;
           send({ type: "chunk", text: char });
@@ -143,8 +161,8 @@ export const action = async ({ request }) => {
         fullText = NO_CONFIG_MSG;
       } else {
         try {
-          fullText = await runAgentLoop({
-            config,
+          const result = await runAgentLoop({
+            modelName,
             scopes: session.scope,
             history,
             executeTool,
@@ -153,25 +171,43 @@ export const action = async ({ request }) => {
               send({ type: "status", text: TOOL_STATUS[toolName] ?? `Running ${toolName}…` }),
             isCancelled: () => cancelled,
           });
+          fullText = result.text;
+          agentUsage = result.usage;
         } catch (err) {
           fullText = `**Error:** ${err.message}`;
           send({ type: "chunk", text: fullText });
         }
       }
 
-      await prisma.chatMessage.create({
-        data: { sessionId, role: "assistant", content: fullText, proposalId: createdProposalId },
-      });
-
       // Generate a short title from the first exchange
-      let title = "New session";
-      if (config?.apiToken) {
-        title = (await generateSessionTitle(config, content, fullText)) ?? title;
+      const title = isAIConfigured()
+        ? ((await generateSessionTitle(modelName, content, fullText)) ?? "New session")
+        : "New session";
+
+      const writes = [
+        prisma.chatMessage.create({
+          data: { sessionId, role: "assistant", content: fullText, proposalId: createdProposalId },
+        }),
+        prisma.chatSession.update({
+          where: { id: sessionId },
+          data: { title },
+        }),
+      ];
+      if (agentUsage?.totalTokens > 0) {
+        writes.push(
+          prisma.tokenUsage.create({
+            data: {
+              shop,
+              sessionId,
+              model: modelName,
+              promptTokens: agentUsage.promptTokens,
+              completionTokens: agentUsage.completionTokens,
+              totalTokens: agentUsage.totalTokens,
+            },
+          })
+        );
       }
-      await prisma.chatSession.update({
-        where: { id: sessionId },
-        data: { title },
-      });
+      await Promise.all(writes);
 
       send({ type: "done" });
       controller.close();

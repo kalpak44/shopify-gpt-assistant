@@ -1,4 +1,4 @@
-import { authenticate } from "../shopify.server";
+import { authenticate, refreshOfflineToken } from "../shopify.server";
 import prisma from "../db.server";
 import { runAgentLoop, isAIConfigured } from "../ai.server";
 import { getMainTheme, shopifyGraphql } from "../theme.server";
@@ -116,15 +116,19 @@ export const action = async ({ request, params }) => {
         try {
           return await attempt(accessToken);
         } catch (err) {
-          // On 401, the offline token may have been rotated by a concurrent request —
-          // re-read the latest token from session storage and retry once.
           if (err.message?.includes("401")) {
+            // 1. Check if a concurrent request already rotated the token in storage.
+            // 2. If not, attempt an explicit OAuth token refresh.
             const stored = await prisma.session.findFirst({
               where: { shop, isOnline: false },
               select: { accessToken: true },
             });
-            if (stored?.accessToken && stored.accessToken !== accessToken) {
-              accessToken = stored.accessToken;
+            const freshToken =
+              stored?.accessToken && stored.accessToken !== accessToken
+                ? stored.accessToken
+                : await refreshOfflineToken(shop);
+            if (freshToken) {
+              accessToken = freshToken;
               try {
                 return await attempt(accessToken);
               } catch (retryErr) {

@@ -17,7 +17,9 @@ export const loader = async ({ request }) => {
     const subscription = await getOrCreateSubscription(shop);
 
     if (!subscription.confirmedAt) {
-      throw redirect("/assistant/plans");
+      const { searchParams } = new URL(request.url);
+      const qs = searchParams.toString();
+      throw redirect(`/assistant/plans${qs ? `?${qs}` : ""}`);
     }
 
     const sessions = await prisma.chatSession.findMany({

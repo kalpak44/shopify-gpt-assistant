@@ -363,6 +363,236 @@ function InlineProposalCard({ proposal, actionError, isSubmitting }) {
 
 // ─── DebugPanel ───────────────────────────────────────────────────────────────
 
+const GQL_API_VERSION = "2026-04";
+
+function GraphqlCallEntry({ call, shop }) {
+  const [expandQuery, setExpandQuery] = useState(false);
+  const [expandVars, setExpandVars] = useState(false);
+  const [expandResp, setExpandResp] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const isPending = call.status === "pending";
+  const isError   = call.status === "error";
+
+  const badgeBg    = call.opType === "mutation" ? "#6b21a8" : "#0550ae";
+  const statusIcon = isPending ? "⏳" : isError ? "✗" : "✓";
+
+  const hasVars = call.variables && Object.keys(call.variables).length > 0;
+
+  const copyCurl = () => {
+    const endpoint = `https://${shop}/admin/api/${GQL_API_VERSION}/graphql.json`;
+    const body = JSON.stringify({
+      query: call.query,
+      ...(hasVars && { variables: call.variables }),
+    });
+    const escaped = body.replace(/'/g, "'\\''");
+    const cmd = `curl -s -X POST '${endpoint}' \\\n  -H 'Content-Type: application/json' \\\n  -H 'X-Shopify-Access-Token: $SHOPIFY_ACCESS_TOKEN' \\\n  --data-raw '${escaped}'`;
+    navigator.clipboard.writeText(cmd).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    });
+  };
+
+  const editorUrl = `https://${shop}/admin/api/graphiql`;
+
+  const btnStyle = {
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    width: "100%",
+    padding: "5px 10px",
+    background: "none",
+    border: "none",
+    borderTop: "1px solid #e1e3e5",
+    cursor: "pointer",
+    fontFamily: "inherit",
+    fontSize: "11px",
+    color: "#6d7175",
+    textAlign: "left",
+  };
+
+  return (
+    <div
+      style={{
+        marginBottom: "6px",
+        border: `1px solid ${isError ? "#f5c6cb" : "#e1e3e5"}`,
+        borderRadius: "6px",
+        overflow: "hidden",
+        background: isError ? "#fff8f8" : "#fff",
+        fontSize: "12px",
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          padding: "6px 10px",
+          background: isError ? "#ffeef0" : "#f6f6f7",
+        }}
+      >
+        <span
+          style={{
+            padding: "1px 7px",
+            borderRadius: "4px",
+            fontFamily: "'SFMono-Regular', Consolas, monospace",
+            fontSize: "10px",
+            fontWeight: 700,
+            background: badgeBg,
+            color: "#fff",
+            letterSpacing: "0.02em",
+            flexShrink: 0,
+          }}
+        >
+          {call.opType ?? "query"}
+        </span>
+        <span
+          style={{
+            flex: 1,
+            fontFamily: "'SFMono-Regular', Consolas, monospace",
+            fontSize: "11px",
+            color: "#202223",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {call.operation}
+        </span>
+        <span style={{ fontSize: "11px", flexShrink: 0 }}>{statusIcon}</span>
+        {call.durationMs !== undefined && (
+          <span style={{ color: "#8c9196", fontSize: "10px", flexShrink: 0 }}>
+            {call.durationMs}ms
+          </span>
+        )}
+      </div>
+
+      {/* Query toggle */}
+      {call.query && (
+        <>
+          <button style={btnStyle} onClick={() => setExpandQuery((v) => !v)}>
+            <span style={{ fontFamily: "monospace", marginRight: "2px" }}>{expandQuery ? "▾" : "▸"}</span>
+            query
+          </button>
+          {expandQuery && (
+            <pre
+              style={{
+                margin: 0,
+                padding: "8px 10px",
+                background: "#fafbfc",
+                fontSize: "10px",
+                fontFamily: "'SFMono-Regular', Consolas, monospace",
+                overflowX: "auto",
+                maxHeight: "200px",
+                overflowY: "auto",
+                lineHeight: "1.5",
+              }}
+            >
+              {call.query}
+            </pre>
+          )}
+        </>
+      )}
+
+      {/* Variables toggle */}
+      {hasVars && (
+        <>
+          <button style={btnStyle} onClick={() => setExpandVars((v) => !v)}>
+            <span style={{ fontFamily: "monospace", marginRight: "2px" }}>{expandVars ? "▾" : "▸"}</span>
+            variables
+          </button>
+          {expandVars && (
+            <pre
+              style={{
+                margin: 0,
+                padding: "8px 10px",
+                background: "#fafbfc",
+                fontSize: "10px",
+                fontFamily: "'SFMono-Regular', Consolas, monospace",
+                overflowX: "auto",
+                maxHeight: "160px",
+                overflowY: "auto",
+                lineHeight: "1.5",
+              }}
+            >
+              {JSON.stringify(call.variables, null, 2)}
+            </pre>
+          )}
+        </>
+      )}
+
+      {/* Response / Error toggle */}
+      {(call.response !== undefined || isError) && (
+        <>
+          <button
+            style={{ ...btnStyle, color: isError ? "#d72c0d" : "#6d7175" }}
+            onClick={() => setExpandResp((v) => !v)}
+          >
+            <span style={{ fontFamily: "monospace", marginRight: "2px" }}>{expandResp ? "▾" : "▸"}</span>
+            {isError ? "error" : "response"}
+          </button>
+          {expandResp && (
+            <pre
+              style={{
+                margin: 0,
+                padding: "8px 10px",
+                background: isError ? "#fff8f8" : "#fafbfc",
+                fontSize: "10px",
+                fontFamily: "'SFMono-Regular', Consolas, monospace",
+                overflowX: "auto",
+                maxHeight: "240px",
+                overflowY: "auto",
+                lineHeight: "1.5",
+                color: isError ? "#d72c0d" : "inherit",
+              }}
+            >
+              {isError ? call.error : JSON.stringify(call.response, null, 2)}
+            </pre>
+          )}
+        </>
+      )}
+
+      {/* Actions */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "8px",
+          padding: "6px 10px",
+          borderTop: "1px solid #e1e3e5",
+          background: "#fafbfc",
+        }}
+      >
+        <button
+          onClick={copyCurl}
+          style={{
+            padding: "3px 8px",
+            fontSize: "10px",
+            color: copied ? "#008060" : "#6d7175",
+            background: "none",
+            border: `1px solid ${copied ? "#008060" : "#e1e3e5"}`,
+            borderRadius: "4px",
+            cursor: "pointer",
+            fontFamily: "inherit",
+            transition: "all 0.15s",
+          }}
+        >
+          {copied ? "✓ Copied" : "Copy cURL"}
+        </button>
+        <a
+          href={editorUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ fontSize: "10px", color: "#0550ae", textDecoration: "none", marginLeft: "auto" }}
+        >
+          Open in GraphQL editor ↗
+        </a>
+      </div>
+    </div>
+  );
+}
+
 function ToolCallEntry({ call }) {
   const [expandArgs, setExpandArgs] = useState(false);
   const [expandResult, setExpandResult] = useState(false);
@@ -494,14 +724,51 @@ function ToolCallEntry({ call }) {
   );
 }
 
-function DebugPanel({ calls, onClear }) {
+function DebugPanel({ toolCalls, graphqlCalls, shop, onClear }) {
+  const [tab, setTab] = useState("tools");
   const debugScrollRef = useRef(null);
 
   useEffect(() => {
     if (debugScrollRef.current) {
       debugScrollRef.current.scrollTop = debugScrollRef.current.scrollHeight;
     }
-  }, [calls]);
+  }, [toolCalls, graphqlCalls]);
+
+  const tabBtn = (id, label, count) => (
+    <button
+      onClick={() => setTab(id)}
+      style={{
+        padding: "4px 10px",
+        fontSize: "11px",
+        fontWeight: tab === id ? 600 : 400,
+        color: tab === id ? "#008060" : "#6d7175",
+        background: tab === id ? "#e8f5f0" : "none",
+        border: `1px solid ${tab === id ? "#008060" : "#e1e3e5"}`,
+        borderRadius: "4px",
+        cursor: "pointer",
+        fontFamily: "inherit",
+        display: "flex",
+        alignItems: "center",
+        gap: "4px",
+      }}
+    >
+      {label}
+      <span
+        style={{
+          padding: "0 5px",
+          borderRadius: "8px",
+          fontSize: "10px",
+          fontWeight: 600,
+          background: tab === id ? "#008060" : "#e1e3e5",
+          color: tab === id ? "#fff" : "#6d7175",
+        }}
+      >
+        {count}
+      </span>
+    </button>
+  );
+
+  const hasAnything = toolCalls.length > 0 || graphqlCalls.length > 0;
 
   return (
     <div
@@ -521,29 +788,20 @@ function DebugPanel({ calls, onClear }) {
           flexShrink: 0,
           display: "flex",
           alignItems: "center",
-          gap: "8px",
-          padding: "0 14px",
-          height: "40px",
+          gap: "6px",
+          padding: "0 10px",
+          height: "44px",
           background: "#f6f6f7",
           borderBottom: "1px solid #e1e3e5",
         }}
       >
-        <span style={{ fontSize: "13px", fontWeight: 600, color: "#202223", flex: 1 }}>
-          🐛 Tool calls
+        <span style={{ fontSize: "12px", fontWeight: 600, color: "#202223", marginRight: "2px" }}>
+          🐛
         </span>
-        <span
-          style={{
-            padding: "1px 6px",
-            borderRadius: "10px",
-            fontSize: "10px",
-            fontWeight: 600,
-            background: "#e1e3e5",
-            color: "#6d7175",
-          }}
-        >
-          {calls.length}
-        </span>
-        {calls.length > 0 && (
+        {tabBtn("tools", "Tools", toolCalls.length)}
+        {tabBtn("graphql", "GraphQL", graphqlCalls.length)}
+        <div style={{ flex: 1 }} />
+        {hasAnything && (
           <button
             onClick={onClear}
             style={{
@@ -562,7 +820,7 @@ function DebugPanel({ calls, onClear }) {
         )}
       </div>
 
-      {/* Tool call list */}
+      {/* Content */}
       <div
         ref={debugScrollRef}
         style={{
@@ -571,27 +829,54 @@ function DebugPanel({ calls, onClear }) {
           padding: "10px",
         }}
       >
-        {calls.length === 0 ? (
-          <div
-            style={{
-              color: "#8c9196",
-              fontSize: "12px",
-              textAlign: "center",
-              paddingTop: "24px",
-              lineHeight: "1.6",
-            }}
-          >
-            <div style={{ fontSize: "20px", marginBottom: "8px" }}>🔍</div>
-            Send a message to see
-            <br />
-            tool activity here.
-          </div>
-        ) : (
-          calls.map((call, i) => <ToolCallEntry key={i} call={call} />)
+        {tab === "tools" && (
+          toolCalls.length === 0 ? (
+            <div
+              style={{
+                color: "#8c9196",
+                fontSize: "12px",
+                textAlign: "center",
+                paddingTop: "24px",
+                lineHeight: "1.6",
+              }}
+            >
+              <div style={{ fontSize: "20px", marginBottom: "8px" }}>🔍</div>
+              Send a message to see
+              <br />
+              tool activity here.
+            </div>
+          ) : (
+            toolCalls.map((call, i) => <ToolCallEntry key={i} call={call} />)
+          )
+        )}
+
+        {tab === "graphql" && (
+          graphqlCalls.length === 0 ? (
+            <div
+              style={{
+                color: "#8c9196",
+                fontSize: "12px",
+                textAlign: "center",
+                paddingTop: "24px",
+                lineHeight: "1.6",
+              }}
+            >
+              <div style={{ fontSize: "20px", marginBottom: "8px" }}>📡</div>
+              No GraphQL calls yet.
+              <br />
+              Send a message to see
+              <br />
+              requests here.
+            </div>
+          ) : (
+            graphqlCalls.map((call, i) => (
+              <GraphqlCallEntry key={i} call={call} shop={shop} />
+            ))
+          )
         )}
       </div>
 
-      {/* Footer: link to tool inspector */}
+      {/* Footer */}
       <div
         style={{
           flexShrink: 0,
@@ -635,6 +920,7 @@ export default function AssistantSession() {
     return false;
   });
   const [debugCalls, setDebugCalls] = useState([]);
+  const [graphqlCalls, setGraphqlCalls] = useState([]);
 
   const textareaRef = useRef(null);
   const scrollRef = useRef(null);
@@ -725,6 +1011,34 @@ export default function AssistantSession() {
                 );
               } else if (evt.kind === "error") {
                 setDebugCalls((prev) =>
+                  prev.map((c) =>
+                    c.seq === evt.seq
+                      ? { ...c, status: "error", error: evt.error, durationMs: evt.durationMs }
+                      : c
+                  )
+                );
+              } else if (evt.kind === "graphql_call") {
+                setGraphqlCalls((prev) => [
+                  ...prev,
+                  {
+                    seq: evt.seq,
+                    operation: evt.operation,
+                    opType: evt.opType,
+                    query: evt.query,
+                    variables: evt.variables,
+                    status: "pending",
+                  },
+                ]);
+              } else if (evt.kind === "graphql_result") {
+                setGraphqlCalls((prev) =>
+                  prev.map((c) =>
+                    c.seq === evt.seq
+                      ? { ...c, status: "ok", response: evt.response, durationMs: evt.durationMs }
+                      : c
+                  )
+                );
+              } else if (evt.kind === "graphql_error") {
+                setGraphqlCalls((prev) =>
                   prev.map((c) =>
                     c.seq === evt.seq
                       ? { ...c, status: "error", error: evt.error, durationMs: evt.durationMs }
@@ -915,7 +1229,12 @@ export default function AssistantSession() {
 
           {/* Debug panel */}
           {debugEnabled && showDebug && (
-            <DebugPanel calls={debugCalls} onClear={() => setDebugCalls([])} />
+            <DebugPanel
+              toolCalls={debugCalls}
+              graphqlCalls={graphqlCalls}
+              shop={chatSession.shop}
+              onClear={() => { setDebugCalls([]); setGraphqlCalls([]); }}
+            />
           )}
         </div>
 

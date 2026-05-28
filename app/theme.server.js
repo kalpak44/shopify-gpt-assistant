@@ -119,8 +119,8 @@ const UPSERT_THEME_FILE_MUTATION = `
   }
 `;
 
-export async function getMainTheme(shop, accessToken) {
-  const { data, errors } = await shopifyGraphql(shop, accessToken, GET_THEMES_QUERY);
+export async function getMainTheme(shop, accessToken, graphqlFn = shopifyGraphql) {
+  const { data, errors } = await graphqlFn(shop, accessToken, GET_THEMES_QUERY);
   if (errors?.length) throw new Error(`Failed to fetch themes: ${errors[0].message}`);
 
   const themes = (data?.themes?.edges ?? []).map((e) => e.node);
@@ -129,8 +129,8 @@ export async function getMainTheme(shop, accessToken) {
   return main;
 }
 
-export async function readThemeFile(shop, accessToken, themeId, path) {
-  const { data, errors } = await shopifyGraphql(shop, accessToken, GET_THEME_FILE_QUERY, {
+export async function readThemeFile(shop, accessToken, themeId, path, graphqlFn = shopifyGraphql) {
+  const { data, errors } = await graphqlFn(shop, accessToken, GET_THEME_FILE_QUERY, {
     themeId,
     filenames: [path],
   });
@@ -144,14 +144,14 @@ export async function readThemeFile(shop, accessToken, themeId, path) {
   return filesResult?.edges?.[0]?.node?.body?.content ?? null;
 }
 
-export async function listThemeFiles(shop, accessToken, themeId, prefix = null) {
+export async function listThemeFiles(shop, accessToken, themeId, prefix = null, graphqlFn = shopifyGraphql) {
   let allFilenames = [];
   let cursor = null;
 
   do {
     const query = cursor ? LIST_THEME_FILES_NEXT_QUERY : LIST_THEME_FILES_QUERY;
     const variables = cursor ? { themeId, cursor } : { themeId };
-    const { data, errors } = await shopifyGraphql(shop, accessToken, query, variables);
+    const { data, errors } = await graphqlFn(shop, accessToken, query, variables);
     if (errors?.length) throw new Error(`Failed to list theme files: ${errors[0].message}`);
 
     const files = data?.theme?.files;

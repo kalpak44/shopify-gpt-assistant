@@ -98,7 +98,7 @@ export const THEME_TOOL_STATUS = {
 //                 DB record is created; the route uses this to emit the SSE event
 //                 and track createdProposalId
 
-export async function executeThemeTool(name, args, { shop, accessToken, getTheme, sessionId, onProposal }) {
+export async function executeThemeTool(name, args, { shop, accessToken, getTheme, sessionId, onProposal, shopifyGraphql: graphqlFn }) {
   switch (name) {
     case "get_current_datetime": {
       const now = new Date();
@@ -112,17 +112,17 @@ export async function executeThemeTool(name, args, { shop, accessToken, getTheme
 
     case "list_theme_files": {
       const theme = await getTheme();
-      return listThemeFiles(shop, accessToken, theme.id, args.prefix ?? null);
+      return listThemeFiles(shop, accessToken, theme.id, args.prefix ?? null, graphqlFn);
     }
 
     case "read_theme_file": {
       const theme = await getTheme();
-      return (await readThemeFile(shop, accessToken, theme.id, args.path)) ?? `File not found: ${args.path}`;
+      return (await readThemeFile(shop, accessToken, theme.id, args.path, graphqlFn)) ?? `File not found: ${args.path}`;
     }
 
     case "propose_file_change": {
       const theme = await getTheme();
-      const before = (await readThemeFile(shop, accessToken, theme.id, args.path)) ?? "";
+      const before = (await readThemeFile(shop, accessToken, theme.id, args.path, graphqlFn)) ?? "";
       const diff = generateUnifiedDiff(before, args.new_content, args.path);
       const proposal = await prisma.changeProposal.create({
         data: {

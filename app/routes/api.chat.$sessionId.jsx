@@ -92,18 +92,35 @@ export const action = async ({ request, params }) => {
       let fullText = "";
       let createdProposalId = null;
 
+      let debugSeq = 0;
+      let graphqlSeq = 0;
+
+      const instrumentedGraphql = async (s, t, query, variables = {}) => {
+        const seq = ++graphqlSeq;
+        const operation = query.match(/(?:query|mutation)\s+(\w+)/)?.[1] ?? "anonymous";
+        const opType = /^\s*mutation/i.test(query) ? "mutation" : "query";
+        if (DEBUG) send({ type: "debug", kind: "graphql_call", seq, operation, opType, query, variables });
+        const t0 = Date.now();
+        try {
+          const result = await shopifyGraphql(s, t, query, variables);
+          if (DEBUG) send({ type: "debug", kind: "graphql_result", seq, response: limitResult(result), durationMs: Date.now() - t0 });
+          return result;
+        } catch (err) {
+          if (DEBUG) send({ type: "debug", kind: "graphql_error", seq, error: err.message, durationMs: Date.now() - t0 });
+          throw err;
+        }
+      };
+
       // Cache theme lookup to avoid redundant Shopify API calls per request
       let cachedTheme = null;
       const getTheme = async () => {
-        if (!cachedTheme) cachedTheme = await getMainTheme(shop, accessToken);
+        if (!cachedTheme) cachedTheme = await getMainTheme(shop, accessToken, instrumentedGraphql);
         return cachedTheme;
       };
 
-      let debugSeq = 0;
-
       const executeToolImpl = async (name, args) => {
         // Product tools — app/tools/products
-        const productResult = await executeProductTool(name, args, { shop, accessToken, shopifyGraphql });
+        const productResult = await executeProductTool(name, args, { shop, accessToken, shopifyGraphql: instrumentedGraphql });
         if (productResult !== null) return productResult;
 
         // Theme + datetime tools — app/tools/themes
@@ -116,11 +133,12 @@ export const action = async ({ request, params }) => {
             createdProposalId = proposalId;
             send({ type: "proposal", proposalId, summary, files });
           },
+          shopifyGraphql: instrumentedGraphql,
         });
         if (themeResult !== null) return themeResult;
 
         // Generic GraphQL passthrough — app/tools/graphql
-        const graphqlResult = await executeGraphqlTool(name, args, { shop, accessToken, shopifyGraphql });
+        const graphqlResult = await executeGraphqlTool(name, args, { shop, accessToken, shopifyGraphql: instrumentedGraphql });
         if (graphqlResult !== null) return graphqlResult;
 
         return { error: `Unknown tool: ${name}` };

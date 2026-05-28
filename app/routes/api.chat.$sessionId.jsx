@@ -43,6 +43,7 @@ const TOOL_STATUS = {
   read_theme_file: "Reading theme file…",
   propose_file_change: "Creating proposal…",
   // Generic GraphQL
+  shopify_schema_lookup: "Looking up schema…",
   shopify_graphql_query: "Querying store data…",
   shopify_graphql_mutation: "Applying change…",
 };

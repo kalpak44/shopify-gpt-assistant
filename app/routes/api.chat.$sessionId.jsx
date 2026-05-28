@@ -50,7 +50,8 @@ const TOOL_STATUS = {
 export const action = async ({ request, params }) => {
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
-  const { accessToken } = session;
+  // let so it can be updated if the offline token is rotated mid-stream
+  let accessToken = session.accessToken;
   const { sessionId } = params;
 
   console.log(`[chat/${sessionId}] session resolved — shop: ${shop}, hasToken: ${!!accessToken}, scope: ${session.scope}`);
@@ -99,17 +100,39 @@ export const action = async ({ request, params }) => {
       let debugSeq = 0;
       let graphqlSeq = 0;
 
-      const instrumentedGraphql = async (s, t, query, variables = {}) => {
+      const instrumentedGraphql = async (s, _token, query, variables = {}) => {
         const seq = ++graphqlSeq;
         const operation = query.match(/(?:query|mutation)\s+(\w+)/)?.[1] ?? "anonymous";
         const opType = /^\s*mutation/i.test(query) ? "mutation" : "query";
         if (DEBUG) send({ type: "debug", kind: "graphql_call", seq, operation, opType, query, variables });
         const t0 = Date.now();
-        try {
-          const result = await shopifyGraphql(s, t, query, variables);
+
+        const attempt = async (token) => {
+          const result = await shopifyGraphql(s, token, query, variables);
           if (DEBUG) send({ type: "debug", kind: "graphql_result", seq, response: limitResult(result), durationMs: Date.now() - t0 });
           return result;
+        };
+
+        try {
+          return await attempt(accessToken);
         } catch (err) {
+          // On 401, the offline token may have been rotated by a concurrent request —
+          // re-read the latest token from session storage and retry once.
+          if (err.message?.includes("401")) {
+            const stored = await prisma.session.findFirst({
+              where: { shop, isOnline: false },
+              select: { accessToken: true },
+            });
+            if (stored?.accessToken && stored.accessToken !== accessToken) {
+              accessToken = stored.accessToken;
+              try {
+                return await attempt(accessToken);
+              } catch (retryErr) {
+                if (DEBUG) send({ type: "debug", kind: "graphql_error", seq, error: retryErr.message, durationMs: Date.now() - t0 });
+                throw retryErr;
+              }
+            }
+          }
           if (DEBUG) send({ type: "debug", kind: "graphql_error", seq, error: err.message, durationMs: Date.now() - t0 });
           throw err;
         }

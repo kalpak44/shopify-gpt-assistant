@@ -70,6 +70,17 @@ export function isAIConfigured() {
   return Boolean(process.env.OPENAI_API_KEY);
 }
 
+/**
+ * Maps raw API errors to user-friendly chat messages.
+ * Returns null if the error should surface as-is.
+ */
+export function friendlyAIError(err) {
+  if (/API 429|rate.?limit|token.*limit|quota/i.test(err.message)) {
+    return "I've hit the AI rate limit for this moment — the model is temporarily out of capacity. This usually clears in a few seconds. If it keeps happening, upgrading to a higher plan gives you access to a larger token quota and a more capable model. You can do that in **[Settings → Subscription](/assistant/settings)**.";
+  }
+  return null;
+}
+
 // ─── OpenAI streaming turn ───────────────────────────────────────────────────
 
 async function streamOpenAITurn({

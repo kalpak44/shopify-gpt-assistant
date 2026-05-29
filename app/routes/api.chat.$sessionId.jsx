@@ -1,6 +1,6 @@
 import { authenticate, refreshOfflineToken } from "../shopify.server";
 import prisma from "../db.server";
-import { runAgentLoop, isAIConfigured } from "../ai.server";
+import { runAgentLoop, isAIConfigured, friendlyAIError } from "../ai.server";
 import { getMainTheme, shopifyGraphql } from "../theme.server";
 import { executeProductTool } from "../tools/products/index.js";
 import { executeThemeTool } from "../tools/themes/index.js";
@@ -234,7 +234,7 @@ export const action = async ({ request, params }) => {
           fullText = result.text;
           agentUsage = result.usage;
         } catch (err) {
-          fullText = `**Error:** ${err.message}`;
+          fullText = friendlyAIError(err) ?? `**Error:** ${err.message}`;
           send({ type: "chunk", text: fullText });
         }
       }

@@ -1,4 +1,4 @@
-# Themes — Shopify Admin GraphQL API 2026-04
+# Themes - Shopify Admin GraphQL API 2026-04
 
 ## Available Tools
 
@@ -16,7 +16,7 @@ Shopify themes follow this directory layout:
 | Directory | Contents |
 |-----------|----------|
 | `layout/` | Base Liquid templates (e.g. `layout/theme.liquid`) |
-| `templates/` | Page templates — JSON (`templates/index.json`) or Liquid |
+| `templates/` | Page templates - JSON (`templates/index.json`) or Liquid |
 | `sections/` | Reusable Liquid section files and their schema blocks |
 | `snippets/` | Partial Liquid files included via `{% render %}` |
 | `assets/` | CSS, JS, and image files |
@@ -27,7 +27,7 @@ Shopify themes follow this directory layout:
 
 1. `list_theme_files` (with a prefix like `sections/`) to discover what exists
 2. `read_theme_file` to inspect the current content before any edit
-3. `propose_file_change` with the **complete new file content** — never a partial diff
+3. `propose_file_change` with the **complete new file content** - never a partial diff
 
 The `propose_file_change` tool generates a unified diff and creates a pending proposal that the merchant sees in the chat UI. The file is **not written** until the merchant approves the proposal.
 
@@ -35,7 +35,7 @@ The `propose_file_change` tool generates a unified diff and creates a pending pr
 
 - Section files contain a `{% schema %}` JSON block that defines settings, blocks, and presets.
 - To add or remove a section, edit the relevant `templates/*.json` file's `"sections"` and `"order"` keys.
-- Settings values live in `config/settings_data.json` — edit this to change global theme settings.
+- Settings values live in `config/settings_data.json` - edit this to change global theme settings.
 
 ## Key GraphQL Types (for `shopify_graphql_query`)
 
@@ -90,5 +90,5 @@ mutation($themeId: ID!, $files: [OnlineStoreThemeFilesUpsertFileInput!]!) {
 
 - Never propose a theme change without first calling `read_theme_file` to get the current content.
 - The `propose_file_change` tool requires the **full file content**, not a partial patch.
-- If `read_themes` scope is not granted, do not attempt to list or read theme files — inform the merchant instead.
-- If `write_themes` scope is not granted, do not propose changes — guide the merchant to use the Theme Editor or Shopify CLI.
+- If `read_themes` scope is not granted, do not attempt to list or read theme files - inform the merchant instead.
+- If `write_themes` scope is not granted, do not propose changes - guide the merchant to use the Theme Editor or Shopify CLI.

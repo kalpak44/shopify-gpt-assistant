@@ -28,21 +28,21 @@ export async function shopifyGraphql(shop, accessToken, query, variables = {}) {
       break;
     } catch (err) {
       if (isTransientNetworkError(err) && attempt < MAX_RETRIES) {
-        console.warn(`[Shopify] ${operation} — transient error (${err.cause?.code ?? err.code}), retrying (${attempt + 1}/${MAX_RETRIES})…`);
+        console.warn(`[Shopify] ${operation} - transient error (${err.cause?.code ?? err.code}), retrying (${attempt + 1}/${MAX_RETRIES})…`);
         await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
         continue;
       }
-      console.error(`[Shopify] ${operation} — fetch failed:`, err.message, err.cause ?? "");
+      console.error(`[Shopify] ${operation} - fetch failed:`, err.message, err.cause ?? "");
       throw err;
     }
   }
 
   if (!response.ok) {
     const text = await response.text();
-    console.error(`[Shopify] ${operation} — HTTP ${response.status}:`, text.slice(0, 300));
+    console.error(`[Shopify] ${operation} - HTTP ${response.status}:`, text.slice(0, 300));
     if (response.status === 401) {
       throw new Error(
-        "Shopify API returned 401 — the session token is invalid or expired. " +
+        "Shopify API returned 401 - the session token is invalid or expired. " +
         "Please reload the app from the Shopify admin to re-authenticate and get a fresh token."
       );
     }
@@ -52,9 +52,9 @@ export async function shopifyGraphql(shop, accessToken, query, variables = {}) {
   const json = await response.json();
 
   if (json.errors?.length) {
-    console.error(`[Shopify] ${operation} — GraphQL errors:`, JSON.stringify(json.errors));
+    console.error(`[Shopify] ${operation} - GraphQL errors:`, JSON.stringify(json.errors));
   } else {
-    console.log(`[Shopify] ${operation} — ok`);
+    console.log(`[Shopify] ${operation} - ok`);
   }
 
   return json;

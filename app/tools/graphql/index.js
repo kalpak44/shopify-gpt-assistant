@@ -27,7 +27,7 @@ export const GRAPHQL_TOOL_DEFS = [
   {
     name: "shopify_graphql_query",
     description:
-      "Run any Shopify Admin GraphQL query to read store data — orders, products, customers, discounts, metaobjects, inventory, markets, finances, analytics, fulfillments, shipping, gift cards, reports, etc. Construct a valid GraphQL query and optionally pass variables.",
+      "Run any Shopify Admin GraphQL query to read store data - orders, products, customers, discounts, metaobjects, inventory, markets, finances, analytics, fulfillments, shipping, gift cards, reports, etc. Construct a valid GraphQL query and optionally pass variables.",
     parameters: {
       type: "object",
       properties: {
@@ -75,9 +75,9 @@ export const GRAPHQL_TOOL_STATUS = {
 // Returns null for unknown tool names so the caller can fall through to other handlers.
 //
 // Context:
-//   shop          — Shopify store domain
-//   accessToken   — Shopify Admin API access token
-//   shopifyGraphql — async (shop, accessToken, query, variables) => { data, errors }
+//   shop          - Shopify store domain
+//   accessToken   - Shopify Admin API access token
+//   shopifyGraphql - async (shop, accessToken, query, variables) => { data, errors }
 
 const INTROSPECT_QUERY = `
   query IntrospectType($name: String!) {
@@ -178,6 +178,6 @@ export async function executeGraphqlTool(name, args, { shop, accessToken, shopif
     }
 
     default:
-      return null; // not a graphql tool — let the caller fall through
+      return null; // not a graphql tool - let the caller fall through
   }
 }

@@ -1,4 +1,4 @@
-// Plan definitions — single source of truth for models, limits, and pricing.
+// Plan definitions - single source of truth for models, limits, and pricing.
 // Models are attached to plans; actual routing happens in ai.server.js via OPENAI_* env vars.
 
 export const PLAN_DEFS = {

@@ -49,13 +49,13 @@ export const PRODUCT_TOOL_DEFS = [
   {
     name: "product_get",
     description:
-      "Fetch complete details of a single product by its GID, including all variants, options, pricing, SEO, and inventory. Required before updating variants — use this to get variant IDs.",
+      "Fetch complete details of a single product by its GID, including all variants, options, pricing, SEO, and inventory. Required before updating variants - use this to get variant IDs.",
     parameters: {
       type: "object",
       properties: {
         id: {
           type: "string",
-          description: "Product GID — e.g. gid://shopify/Product/1234567890",
+          description: "Product GID - e.g. gid://shopify/Product/1234567890",
         },
       },
       required: ["id"],
@@ -133,7 +133,7 @@ export const PRODUCT_TOOL_DEFS = [
   {
     name: "product_update",
     description:
-      "Update fields on an existing product. Only include the fields you want to change — omitted fields are left as-is. Use product_variants_update for price/SKU changes.",
+      "Update fields on an existing product. Only include the fields you want to change - omitted fields are left as-is. Use product_variants_update for price/SKU changes.",
     parameters: {
       type: "object",
       properties: {
@@ -168,7 +168,7 @@ export const PRODUCT_TOOL_DEFS = [
   {
     name: "product_delete",
     description:
-      "Permanently delete a product and all its variants, media, and publications. IRREVERSIBLE — always confirm with the merchant before calling this tool.",
+      "Permanently delete a product and all its variants, media, and publications. IRREVERSIBLE - always confirm with the merchant before calling this tool.",
     parameters: {
       type: "object",
       properties: {
@@ -245,7 +245,7 @@ export const PRODUCT_TOOL_DEFS = [
             properties: {
               id: {
                 type: "string",
-                description: "Variant GID — e.g. gid://shopify/ProductVariant/1234567890.",
+                description: "Variant GID - e.g. gid://shopify/ProductVariant/1234567890.",
               },
               price: {
                 type: "string",
@@ -427,6 +427,6 @@ export async function executeProductTool(name, args, { shop, accessToken, shopif
     }
 
     default:
-      return null; // not a product tool — let the caller fall through
+      return null; // not a product tool - let the caller fall through
   }
 }

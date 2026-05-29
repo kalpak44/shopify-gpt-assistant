@@ -1,4 +1,4 @@
-# Products — Shopify Admin GraphQL API 2026-04
+# Products - Shopify Admin GraphQL API 2026-04
 
 ## Available Tools
 
@@ -70,17 +70,17 @@ All Shopify resource IDs are Global IDs:
 `product_update` with `{ id, status: "ACTIVE" }`
 
 ### Delete a product
-**Always confirm with the merchant first** — deletion removes all variants, media, and publications and cannot be undone. Then call `product_delete`.
+**Always confirm with the merchant first** - deletion removes all variants, media, and publications and cannot be undone. Then call `product_delete`.
 
 ## Filter Syntax for `product_list`
 Passed as the `query` parameter:
-- `title:Shirt` — title contains
-- `status:active` — status filter (active, draft, archived)
-- `vendor:Nike` — exact vendor match
-- `product_type:Footwear` — product type match
-- `tag:sale` — has tag
-- `sku:ABC-123` — variant SKU match
-- `handle:my-product` — handle match
+- `title:Shirt` - title contains
+- `status:active` - status filter (active, draft, archived)
+- `vendor:Nike` - exact vendor match
+- `product_type:Footwear` - product type match
+- `tag:sale` - has tag
+- `sku:ABC-123` - variant SKU match
+- `handle:my-product` - handle match
 - Combine: `status:active vendor:Nike tag:summer`
 
 ## Sort Keys for `product_list`

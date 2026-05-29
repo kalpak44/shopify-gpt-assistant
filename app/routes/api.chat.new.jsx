@@ -15,7 +15,7 @@ function limitResult(result) {
   const json = JSON.stringify(result);
   if (json.length > 4000) {
     if (Array.isArray(result))
-      return { _note: `Array[${result.length}] — showing first 3`, _preview: result.slice(0, 3) };
+      return { _note: `Array[${result.length}] - showing first 3`, _preview: result.slice(0, 3) };
     return { _note: "Result truncated", _preview: json.slice(0, 2000) };
   }
   return result;

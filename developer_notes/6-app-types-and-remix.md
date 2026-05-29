@@ -45,35 +45,35 @@ Then follow the prompts:
 
 ## Adding Remix to an Existing Extension-Only App
 
-No CLI command for this — done manually. Minimum files to add:
+No CLI command for this - done manually. Minimum files to add:
 
 ### Infrastructure
 
-- `package.json` — add React Router, Shopify, and Prisma dependencies
-- `vite.config.js` — build config
-- `shopify.web.toml` — tells the CLI "this app has a web server"
-- `.npmrc` — Node engine enforcement
+- `package.json` - add React Router, Shopify, and Prisma dependencies
+- `vite.config.js` - build config
+- `shopify.web.toml` - tells the CLI "this app has a web server"
+- `.npmrc` - Node engine enforcement
 
 ### Database (session storage)
 
-- `prisma/schema.prisma` — `Session` model (Shopify stores OAuth sessions here)
+- `prisma/schema.prisma` - `Session` model (Shopify stores OAuth sessions here)
 
 ### App
 
-- `app/db.server.js` — Prisma client
-- `app/shopify.server.js` — Shopify auth config + `afterAuth` hook
-- `app/entry.server.jsx` — server entry point
-- `app/root.jsx` — root HTML shell
-- `app/routes.js` — route config
-- `app/routes/auth.$.jsx` — handles OAuth redirect
-- `app/routes/auth.login/route.jsx` — login page
-- `app/routes/auth.login/error.server.jsx` — error helper
-- `app/routes/app.jsx` — layout with auth guard
-- `app/routes/app._index.jsx` — home page
+- `app/db.server.js` - Prisma client
+- `app/shopify.server.js` - Shopify auth config + `afterAuth` hook
+- `app/entry.server.jsx` - server entry point
+- `app/root.jsx` - root HTML shell
+- `app/routes.js` - route config
+- `app/routes/auth.$.jsx` - handles OAuth redirect
+- `app/routes/auth.login/route.jsx` - login page
+- `app/routes/auth.login/error.server.jsx` - error helper
+- `app/routes/app.jsx` - layout with auth guard
+- `app/routes/app._index.jsx` - home page
 
 ### Update
 
-- `shopify.app.toml` — switch `embedded = true`, add build config
+- `shopify.app.toml` - switch `embedded = true`, add build config
 
 ## npm Commands
 
@@ -86,7 +86,7 @@ npm run setup        # run prisma generate + migrate (first-time DB setup)
 npm run deploy       # deploy app to Shopify
 ```
 
-`npm run dev` is the main command during development — it starts the Vite server, tunnels it via Shopify CLI, and
+`npm run dev` is the main command during development - it starts the Vite server, tunnels it via Shopify CLI, and
 watches for file changes.
 
 ## Key Concept: afterAuth Hook

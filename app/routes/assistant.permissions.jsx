@@ -150,7 +150,7 @@ function ScopeRow({ scope, granted, enabled, onToggle, isLast }) {
         opacity: granted ? 1 : 0.55,
       }}
     >
-      {/* Toggle switch — click handler on the visual div, no hidden input */}
+      {/* Toggle switch - click handler on the visual div, no hidden input */}
       <div
         role="switch"
         aria-checked={isOn}

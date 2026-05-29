@@ -16,7 +16,7 @@ function limitResult(result) {
   const json = JSON.stringify(result);
   if (json.length > 4000) {
     if (Array.isArray(result))
-      return { _note: `Array[${result.length}] — showing first 3`, _preview: result.slice(0, 3) };
+      return { _note: `Array[${result.length}] - showing first 3`, _preview: result.slice(0, 3) };
     return { _note: "Result truncated", _preview: json.slice(0, 2000) };
   }
   return result;
@@ -53,10 +53,10 @@ export const action = async ({ request, params }) => {
   let accessToken = session.accessToken;
   const { sessionId } = params;
 
-  console.log(`[chat/${sessionId}] session resolved — shop: ${shop}, hasToken: ${!!accessToken}, scope: ${session.scope}`);
+  console.log(`[chat/${sessionId}] session resolved - shop: ${shop}, hasToken: ${!!accessToken}, scope: ${session.scope}`);
 
   if (!shop || !accessToken) {
-    console.error(`[chat/${sessionId}] session missing shop or accessToken — aborting`);
+    console.error(`[chat/${sessionId}] session missing shop or accessToken - aborting`);
     return new Response("Unauthorized", { status: 401 });
   }
 
@@ -164,11 +164,11 @@ export const action = async ({ request, params }) => {
       };
 
       const executeToolImpl = async (name, args) => {
-        // Product tools — app/tools/products
+        // Product tools - app/tools/products
         const productResult = await executeProductTool(name, args, { shop, accessToken, shopifyGraphql: instrumentedGraphql });
         if (productResult !== null) return productResult;
 
-        // Theme + datetime tools — app/tools/themes
+        // Theme + datetime tools - app/tools/themes
         const themeResult = await executeThemeTool(name, args, {
           shop,
           accessToken,
@@ -182,7 +182,7 @@ export const action = async ({ request, params }) => {
         });
         if (themeResult !== null) return themeResult;
 
-        // Generic GraphQL passthrough — app/tools/graphql
+        // Generic GraphQL passthrough - app/tools/graphql
         const graphqlResult = await executeGraphqlTool(name, args, { shop, accessToken, shopifyGraphql: instrumentedGraphql });
         if (graphqlResult !== null) return graphqlResult;
 

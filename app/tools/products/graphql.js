@@ -1,4 +1,4 @@
-// Shopify Admin GraphQL 2026-04 — Product operations
+// Shopify Admin GraphQL 2026-04 - Product operations
 // All operations are versioned against 2026-04.
 
 export const GET_PRODUCT = /* GraphQL */ `

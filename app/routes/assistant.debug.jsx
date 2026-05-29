@@ -90,7 +90,7 @@ function ParamsTable({ parameters }) {
               {required.has(name) ? (
                 <span style={{ color: "#d72c0d", fontWeight: 700, fontSize: "11px" }}>✓</span>
               ) : (
-                <span style={{ color: "#8c9196", fontSize: "11px" }}>—</span>
+                <span style={{ color: "#8c9196", fontSize: "11px" }}>-</span>
               )}
             </td>
             <td style={{ padding: "6px 10px", color: "#6d7175", fontSize: "12px", lineHeight: "1.4" }}>
@@ -150,7 +150,7 @@ export default function AssistantDebug() {
           <span>
             {debugEnabled ? (
               <>
-                <strong>Debug mode active</strong> — live tool call events are streamed to the debug
+                <strong>Debug mode active</strong> - live tool call events are streamed to the debug
                 panel in chat sessions and the server console.
               </>
             ) : (

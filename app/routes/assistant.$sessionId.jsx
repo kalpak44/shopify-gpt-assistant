@@ -1110,7 +1110,7 @@ export default function AssistantSession() {
             {chatSession.title || "Assistant GPT"}
           </span>
 
-          {/* Debug toggle — only visible when debug mode is enabled in Settings */}
+          {/* Debug toggle - only visible when debug mode is enabled in Settings */}
           {debugEnabled && (
             <button
               onClick={toggleDebug}
@@ -1154,7 +1154,7 @@ export default function AssistantSession() {
                   <div style={{ fontSize: "28px", marginBottom: "12px" }}>🤖</div>
                   <p style={{ margin: "0 0 6px", fontWeight: 500, color: "#202223" }}>Assistant GPT</p>
                   <p style={{ margin: 0, fontSize: "13px" }}>
-                    Ask me anything about your store — themes, products, orders, customers, and more.
+                    Ask me anything about your store - themes, products, orders, customers, and more.
                   </p>
                 </div>
               )}

@@ -50,7 +50,7 @@ export const action = async ({ request }) => {
     throw redirect("/");
   }
 
-  // Paid plans — redirect to Shopify billing confirmation page
+  // Paid plans - redirect to Shopify billing confirmation page
   const billingPlan = plan === "pro" ? BILLING_PLAN_PRO : BILLING_PLAN_ENTERPRISE;
   const appUrl = (process.env.SHOPIFY_APP_URL || "").replace(/\/$/, "");
   const returnUrl = `${appUrl}/assistant/billing/confirm`;
@@ -91,7 +91,7 @@ export default function AssistantPlans() {
           color: "#202223",
         }}
       >
-        {/* Back link — only shown when already onboarded (editing plan) */}
+        {/* Back link - only shown when already onboarded (editing plan) */}
         {!isOnboarding && (
           <div style={{ position: "absolute", top: "24px", left: "32px" }}>
             <Link to="/" style={{ fontSize: "13px", color: "#6d7175", textDecoration: "none" }}>

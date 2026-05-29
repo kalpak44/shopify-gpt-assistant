@@ -9,7 +9,7 @@ export const THEME_TOOL_DEFS = [
   {
     name: "get_current_datetime",
     description:
-      "Get the current date and time on the server. Call this whenever the merchant's question involves relative time — 'today', 'this week', 'yesterday', 'last month', etc. — so you can construct accurate date-range filters in GraphQL queries.",
+      "Get the current date and time on the server. Call this whenever the merchant's question involves relative time - 'today', 'this week', 'yesterday', 'last month', etc. - so you can construct accurate date-range filters in GraphQL queries.",
     parameters: { type: "object", properties: {}, required: [] },
   },
 
@@ -22,7 +22,7 @@ export const THEME_TOOL_DEFS = [
   {
     name: "list_theme_files",
     description:
-      "List filenames in the active Shopify theme. Optionally filter by a directory prefix such as 'sections/', 'templates/', 'snippets/', 'assets/', 'config/', 'layout/', or 'locales/'. Returns filenames only — use read_theme_file to get the content of a specific file. Call this first to discover what sections, templates, and other files exist before reading or modifying them.",
+      "List filenames in the active Shopify theme. Optionally filter by a directory prefix such as 'sections/', 'templates/', 'snippets/', 'assets/', 'config/', 'layout/', or 'locales/'. Returns filenames only - use read_theme_file to get the content of a specific file. Call this first to discover what sections, templates, and other files exist before reading or modifying them.",
     parameters: {
       type: "object",
       properties: {
@@ -63,7 +63,7 @@ export const THEME_TOOL_DEFS = [
         path: { type: "string", description: "File path to modify" },
         new_content: {
           type: "string",
-          description: "The complete new content for the file (not a diff — the full updated file)",
+          description: "The complete new content for the file (not a diff - the full updated file)",
         },
         summary: {
           type: "string",
@@ -90,11 +90,11 @@ export const THEME_TOOL_STATUS = {
 // Returns null for unknown tool names so the caller can fall through to other handlers.
 //
 // Context:
-//   shop        — Shopify store domain
-//   accessToken — Shopify Admin API access token
-//   getTheme    — async () => { id, name } — cached per-request theme lookup
-//   sessionId   — current chat session ID (used when creating proposals)
-//   onProposal  — callback({ proposalId, summary, files }) fired after a proposal
+//   shop        - Shopify store domain
+//   accessToken - Shopify Admin API access token
+//   getTheme    - async () => { id, name } - cached per-request theme lookup
+//   sessionId   - current chat session ID (used when creating proposals)
+//   onProposal  - callback({ proposalId, summary, files }) fired after a proposal
 //                 DB record is created; the route uses this to emit the SSE event
 //                 and track createdProposalId
 
@@ -139,6 +139,6 @@ export async function executeThemeTool(name, args, { shop, accessToken, getTheme
     }
 
     default:
-      return null; // not a theme tool — let the caller fall through
+      return null; // not a theme tool - let the caller fall through
   }
 }

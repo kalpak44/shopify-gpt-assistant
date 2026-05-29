@@ -1,4 +1,4 @@
-// Lightweight markdown renderer — no external dependencies.
+// Lightweight markdown renderer - no external dependencies.
 // Handles: fenced code blocks, headings, bullet lists, ordered lists, tables, bold, italic, inline code, hr.
 
 const INLINE_CODE = {
@@ -69,7 +69,7 @@ function isSeparatorRow(line) {
 
 function renderInline(text, keyPrefix) {
   const parts = [];
-  // matches **bold**, *italic*, `code` — in one pass, picks earliest match
+  // matches **bold**, *italic*, `code` - in one pass, picks earliest match
   const re = /(\*\*(.+?)\*\*|\*(.+?)\*|`([^`]+)`)/g;
   let last = 0;
   let k = 0;

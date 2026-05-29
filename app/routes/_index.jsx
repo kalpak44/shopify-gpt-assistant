@@ -74,7 +74,7 @@ export default function Index() {
               <span style={planBadgeStyle}>{currentPlan.name}</span>
             </div>
             <p style={{ margin: 0, fontSize: "14px", color: "#6d7175" }}>
-              Manage your Shopify store with AI — themes, orders, products, customers, and more.
+              Manage your Shopify store with AI - themes, orders, products, customers, and more.
             </p>
           </div>
           <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
@@ -89,7 +89,7 @@ export default function Index() {
         {/* ── Session list ── */}
         {sessions.length === 0 ? (
           <div style={{ padding: "48px 24px", textAlign: "center", border: "1px dashed #c9cccf", borderRadius: "8px", color: "#6d7175", fontSize: "14px" }}>
-            No sessions yet — click <strong>New session</strong> to start chatting.
+            No sessions yet - click <strong>New session</strong> to start chatting.
           </div>
         ) : (
           <div style={{ border: "1px solid #e1e3e5", borderRadius: "8px", overflow: "hidden" }}>

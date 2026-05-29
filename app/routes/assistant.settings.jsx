@@ -244,7 +244,7 @@ export default function AssistantSettings() {
               <UsageBar used={usage.totalTokens} limit={tokenLimit} />
             </div>
 
-            {/* Billing row — paid plans only */}
+            {/* Billing row - paid plans only */}
             {subscription.plan !== "free" && (
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "14px 20px", background: "#fafbfc" }}>
                 <span style={{ fontSize: "13px", color: "#6d7175" }}>

@@ -179,6 +179,19 @@ async function streamOpenAITurn({
   return { textContent, toolCalls, assistantMsg, usage };
 }
 
+const RETRY_DELAYS_MS = [3000, 4000, 5000];
+
+async function withRateLimitRetry(fn) {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      if (attempt >= RETRY_DELAYS_MS.length || !/API 429|rate.?limit|token.*limit|quota/i.test(err.message)) throw err;
+      await new Promise((r) => setTimeout(r, RETRY_DELAYS_MS[attempt]));
+    }
+  }
+}
+
 async function runOpenAIAgentLoop({
   baseUrl, apiToken, modelName, scopes, history, executeTool, onChunk, onStatus, isCancelled,
 }) {
@@ -195,9 +208,9 @@ async function runOpenAIAgentLoop({
 
   const maxIter = parseInt(process.env.MAX_TOOL_ITERATIONS ?? "8", 10);
   for (let turn = 0; turn < maxIter; turn++) {
-    const { textContent, toolCalls, assistantMsg, usage } = await streamOpenAITurn({
-      baseUrl, apiToken, modelName, messages, tools, onChunk, isCancelled,
-    });
+    const { textContent, toolCalls, assistantMsg, usage } = await withRateLimitRetry(() =>
+      streamOpenAITurn({ baseUrl, apiToken, modelName, messages, tools, onChunk, isCancelled })
+    );
 
     if (usage) {
       totalUsage.promptTokens     += usage.promptTokens;

@@ -193,7 +193,8 @@ async function runOpenAIAgentLoop({
 
   let totalUsage = { promptTokens: 0, completionTokens: 0, totalTokens: 0 };
 
-  for (let turn = 0; turn < 8; turn++) {
+  const maxIter = parseInt(process.env.MAX_TOOL_ITERATIONS ?? "8", 10);
+  for (let turn = 0; turn < maxIter; turn++) {
     const { textContent, toolCalls, assistantMsg, usage } = await streamOpenAITurn({
       baseUrl, apiToken, modelName, messages, tools, onChunk, isCancelled,
     });

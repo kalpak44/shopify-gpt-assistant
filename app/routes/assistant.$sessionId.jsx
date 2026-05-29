@@ -16,6 +16,7 @@ import prisma from "../db.server";
 import { readThemeFile, writeThemeFile } from "../theme.server";
 import { runAgentLoop } from "../ai.server";
 import { Markdown } from "../markdown.jsx";
+import { getOrCreateSubscription } from "../subscription.server.js";
 
 // ─── Loader ──────────────────────────────────────────────────────────────────
 
@@ -29,7 +30,7 @@ export const loader = async ({ request, params }) => {
   });
   if (!chatSession) throw new Response("Session not found", { status: 404 });
 
-  const [messages, proposals] = await Promise.all([
+  const [messages, proposals, subscription] = await Promise.all([
     prisma.chatMessage.findMany({
       where: { sessionId },
       orderBy: { createdAt: "asc" },
@@ -38,6 +39,7 @@ export const loader = async ({ request, params }) => {
       where: { sessionId },
       orderBy: { createdAt: "asc" },
     }),
+    getOrCreateSubscription(shop),
   ]);
 
   const proposalMap = Object.fromEntries(proposals.map((p) => [p.id, p]));
@@ -47,7 +49,7 @@ export const loader = async ({ request, params }) => {
     chatSession,
     messages,
     proposalMap,
-    debugEnabled: process.env.DEBUGG === "true",
+    debugEnabled: subscription.debugEnabled,
   };
 };
 
@@ -1108,7 +1110,7 @@ export default function AssistantSession() {
             {chatSession.title || "Assistant GPT"}
           </span>
 
-          {/* Debug toggle — only visible when DEBUGG=true */}
+          {/* Debug toggle — only visible when debug mode is enabled in Settings */}
           {debugEnabled && (
             <button
               onClick={toggleDebug}

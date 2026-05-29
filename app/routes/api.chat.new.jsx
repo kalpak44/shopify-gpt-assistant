@@ -8,8 +8,6 @@ import { executeGraphqlTool } from "../tools/graphql/index.js";
 import { getOrCreateSubscription } from "../subscription.server.js";
 import { getPlanModel } from "../plans.js";
 
-const DEBUG = process.env.DEBUGG === "true";
-
 function limitResult(result) {
   if (result === null || result === undefined) return result;
   if (typeof result === "string")
@@ -73,6 +71,7 @@ export const action = async ({ request }) => {
   ]);
 
   const modelName = getPlanModel(subscription.plan);
+  const debug = subscription.debugEnabled;
 
   const encoder = new TextEncoder();
   let cancelled = false;
@@ -94,14 +93,23 @@ export const action = async ({ request }) => {
         const seq = ++graphqlSeq;
         const operation = query.match(/(?:query|mutation)\s+(\w+)/)?.[1] ?? "anonymous";
         const opType = /^\s*mutation/i.test(query) ? "mutation" : "query";
-        if (DEBUG) send({ type: "debug", kind: "graphql_call", seq, operation, opType, query, variables });
+        if (debug) {
+          console.log(`[chat/new→${sessionId}] debug:graphql_call`, operation, opType);
+          send({ type: "debug", kind: "graphql_call", seq, operation, opType, query, variables });
+        }
         const t0 = Date.now();
         try {
           const result = await shopifyGraphql(s, t, query, variables);
-          if (DEBUG) send({ type: "debug", kind: "graphql_result", seq, response: limitResult(result), durationMs: Date.now() - t0 });
+          if (debug) {
+            console.log(`[chat/new→${sessionId}] debug:graphql_result`, operation, `${Date.now() - t0}ms`);
+            send({ type: "debug", kind: "graphql_result", seq, response: limitResult(result), durationMs: Date.now() - t0 });
+          }
           return result;
         } catch (err) {
-          if (DEBUG) send({ type: "debug", kind: "graphql_error", seq, error: err.message, durationMs: Date.now() - t0 });
+          if (debug) {
+            console.log(`[chat/new→${sessionId}] debug:graphql_error`, operation, err.message);
+            send({ type: "debug", kind: "graphql_error", seq, error: err.message, durationMs: Date.now() - t0 });
+          }
           throw err;
         }
       };
@@ -138,14 +146,20 @@ export const action = async ({ request }) => {
       const executeTool = async (name, args) => {
         const seq = ++debugSeq;
         console.log(`[chat/new→${sessionId}] tool →`, name, JSON.stringify(args).slice(0, 120));
-        if (DEBUG) send({ type: "debug", kind: "call", tool: name, args, seq });
+        if (debug) send({ type: "debug", kind: "call", tool: name, args, seq });
         const t0 = Date.now();
         try {
           const result = await executeToolImpl(name, args);
-          if (DEBUG) send({ type: "debug", kind: "result", tool: name, result: limitResult(result), durationMs: Date.now() - t0, seq });
+          if (debug) {
+            console.log(`[chat/new→${sessionId}] debug:result`, name, `${Date.now() - t0}ms`);
+            send({ type: "debug", kind: "result", tool: name, result: limitResult(result), durationMs: Date.now() - t0, seq });
+          }
           return result;
         } catch (err) {
-          if (DEBUG) send({ type: "debug", kind: "error", tool: name, error: err.message, durationMs: Date.now() - t0, seq });
+          if (debug) {
+            console.log(`[chat/new→${sessionId}] debug:error`, name, err.message);
+            send({ type: "debug", kind: "error", tool: name, error: err.message, durationMs: Date.now() - t0, seq });
+          }
           throw err;
         }
       };

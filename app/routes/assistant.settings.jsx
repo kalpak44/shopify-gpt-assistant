@@ -1,7 +1,8 @@
-import { useLoaderData, useRouteError, Link } from "react-router";
+import { useLoaderData, useRouteError, useFetcher, Link } from "react-router";
 import { boundary } from "@shopify/shopify-app-react-router/server";
 import { AppProvider } from "@shopify/shopify-app-react-router/react";
 import { authenticate } from "../shopify.server";
+import prisma from "../db.server";
 import { getOrCreateSubscription, getMonthlyTokenUsage } from "../subscription.server.js";
 import { PLAN_DEFS, getPlanModel } from "../plans.js";
 
@@ -20,7 +21,28 @@ export const loader = async ({ request }) => {
     apiKey: process.env.SHOPIFY_API_KEY || "",
     subscription,
     usage,
+    debugEnabled: subscription.debugEnabled,
   };
+};
+
+// ─── Action ──────────────────────────────────────────────────────────────────
+
+export const action = async ({ request }) => {
+  const { session } = await authenticate.admin(request);
+  const shop = session.shop;
+  const formData = await request.formData();
+  const intent = formData.get("intent");
+
+  if (intent === "toggle_debug") {
+    const enabled = formData.get("debugEnabled") === "true";
+    await prisma.subscription.update({
+      where: { shop },
+      data: { debugEnabled: enabled },
+    });
+    return { ok: true };
+  }
+
+  return null;
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -60,7 +82,8 @@ function UsageBar({ used, limit }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AssistantSettings() {
-  const { apiKey, subscription, usage } = useLoaderData();
+  const { apiKey, subscription, usage, debugEnabled } = useLoaderData();
+  const debugFetcher = useFetcher();
 
   const currentPlan = PLAN_DEFS[subscription.plan] ?? PLAN_DEFS.free;
   const tokenLimit = currentPlan.tokenLimitMonthly;
@@ -112,6 +135,57 @@ export default function AssistantSettings() {
               >
                 Manage →
               </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Debug ── */}
+        <section style={{ marginBottom: "28px" }}>
+          <h2 style={{ fontSize: "11px", fontWeight: 600, margin: "0 0 14px", color: "#6d7175", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+            Developer
+          </h2>
+          <div style={{ border: "1px solid #e1e3e5", borderRadius: "10px", background: "#fff", overflow: "hidden" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "16px 20px" }}>
+              <div>
+                <div style={{ fontSize: "14px", fontWeight: 500, marginBottom: "2px" }}>Debug mode</div>
+                <div style={{ fontSize: "12px", color: "#6d7175" }}>
+                  Stream tool calls and GraphQL events to the in-app debug panel and server console
+                </div>
+              </div>
+              <debugFetcher.Form method="post">
+                <input type="hidden" name="intent" value="toggle_debug" />
+                <input type="hidden" name="debugEnabled" value={String(!(debugFetcher.formData ? debugFetcher.formData.get("debugEnabled") === "true" : debugEnabled))} />
+                <button
+                  type="submit"
+                  style={{
+                    position: "relative",
+                    display: "inline-flex",
+                    width: "44px",
+                    height: "24px",
+                    borderRadius: "12px",
+                    border: "none",
+                    cursor: "pointer",
+                    background: (debugFetcher.formData ? debugFetcher.formData.get("debugEnabled") === "true" : debugEnabled) ? "#008060" : "#c9cccf",
+                    transition: "background 0.2s",
+                    padding: 0,
+                    flexShrink: 0,
+                  }}
+                  aria-label="Toggle debug mode"
+                >
+                  <span
+                    style={{
+                      position: "absolute",
+                      top: "3px",
+                      left: (debugFetcher.formData ? debugFetcher.formData.get("debugEnabled") === "true" : debugEnabled) ? "23px" : "3px",
+                      width: "18px",
+                      height: "18px",
+                      borderRadius: "50%",
+                      background: "#fff",
+                      transition: "left 0.2s",
+                    }}
+                  />
+                </button>
+              </debugFetcher.Form>
             </div>
           </div>
         </section>

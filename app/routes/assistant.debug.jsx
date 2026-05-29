@@ -3,14 +3,16 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { AppProvider } from "@shopify/shopify-app-react-router/react";
 import { authenticate } from "../shopify.server";
 import { TOOL_DEFS } from "../ai.server";
+import { getOrCreateSubscription } from "../subscription.server.js";
 
 // ─── Loader ──────────────────────────────────────────────────────────────────
 
 export const loader = async ({ request }) => {
-  await authenticate.admin(request);
+  const { session } = await authenticate.admin(request);
+  const subscription = await getOrCreateSubscription(session.shop);
   return {
     apiKey: process.env.SHOPIFY_API_KEY || "",
-    debugEnabled: process.env.DEBUGG === "true",
+    debugEnabled: subscription.debugEnabled,
     tools: TOOL_DEFS.map((t) => ({
       name: t.name,
       description: t.description,
@@ -149,22 +151,13 @@ export default function AssistantDebug() {
             {debugEnabled ? (
               <>
                 <strong>Debug mode active</strong> — live tool call events are streamed to the debug
-                panel in chat sessions. Started with <code style={{ fontFamily: "monospace" }}>DEBUGG=true</code>.
+                panel in chat sessions and the server console.
               </>
             ) : (
               <>
-                <strong>Debug mode inactive.</strong> Restart the app with{" "}
-                <code
-                  style={{
-                    fontFamily: "'SFMono-Regular', Consolas, monospace",
-                    background: "#fff3cd",
-                    padding: "1px 5px",
-                    borderRadius: "3px",
-                  }}
-                >
-                  DEBUGG=true npm run dev
-                </code>{" "}
-                to enable live tool-call streaming in the chat debug panel.
+                <strong>Debug mode inactive.</strong> Enable it in{" "}
+                <Link to="/assistant/settings" style={{ color: "#008060" }}>Settings → Developer</Link>{" "}
+                to stream live tool-call events to the chat debug panel and server console.
               </>
             )}
           </span>

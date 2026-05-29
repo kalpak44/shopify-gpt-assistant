@@ -94,6 +94,7 @@ model Subscription {
   status      String    @default("active") // active | cancelled | past_due
   confirmedAt DateTime? // set when merchant explicitly selects a plan
   aiScopes    String?   // comma-separated list of scopes the merchant allows the AI to use; null = all granted
+  debugEnabled Boolean  @default(false)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 

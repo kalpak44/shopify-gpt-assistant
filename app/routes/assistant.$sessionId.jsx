@@ -878,22 +878,6 @@ function DebugPanel({ toolCalls, graphqlCalls, shop, onClear }) {
         )}
       </div>
 
-      {/* Footer */}
-      <div
-        style={{
-          flexShrink: 0,
-          borderTop: "1px solid #e1e3e5",
-          padding: "8px 14px",
-          background: "#f6f6f7",
-        }}
-      >
-        <Link
-          to="/assistant/debug"
-          style={{ fontSize: "11px", color: "#6d7175", textDecoration: "none" }}
-        >
-          Tool inspector →
-        </Link>
-      </div>
     </div>
   );
 }

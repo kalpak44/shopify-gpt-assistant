@@ -78,7 +78,6 @@ export default function Index() {
             </p>
           </div>
           <div style={{ display: "flex", gap: "8px", flexShrink: 0 }}>
-            <Link to="/assistant/debug" style={linkBtnStyle}>🐛 Debug</Link>
             <Link to="/assistant/settings" style={linkBtnStyle}>Settings</Link>
             <Link to="/assistant/new" style={{ ...linkBtnStyle, background: "#303030", color: "#fff", border: "1px solid #303030", fontWeight: 600 }}>
               New session

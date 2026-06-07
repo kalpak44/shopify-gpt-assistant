@@ -227,7 +227,10 @@ async function runOpenAIAgentLoop({
       onStatus(tc.name);
       let result;
       try { result = await executeTool(tc.name, tc.args); }
-      catch (err) { result = { error: err.message }; }
+      catch (err) {
+        if (/\b401\b/.test(err.message)) throw err; // let auth errors surface to the caller
+        result = { error: err.message };
+      }
       messages.push({
         role: "tool",
         tool_call_id: tc.id,

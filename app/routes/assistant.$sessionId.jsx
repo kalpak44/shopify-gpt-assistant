@@ -904,6 +904,7 @@ export default function AssistantSession() {
   const [streamingText, setStreamingText] = useState(null);
   const [statusText, setStatusText] = useState(null);
   const [streamingProposal, setStreamingProposal] = useState(null);
+  const [authError, setAuthError] = useState(false);
 
   // ── Debug state ──
   const [showDebug, setShowDebug] = useState(() => {
@@ -983,6 +984,10 @@ export default function AssistantSession() {
               setStatusText(evt.text);
             } else if (evt.type === "proposal") {
               setStreamingProposal({ ...evt, status: "pending" });
+            } else if (evt.type === "auth_error") {
+              setAuthError(true);
+              setIsSending(false);
+              setStatusText(null);
             } else if (evt.type === "done") {
               setStatusText(null);
               setIsSending(false);
@@ -1126,6 +1131,43 @@ export default function AssistantSession() {
             </button>
           )}
         </div>
+
+        {/* ── Auth error banner ── */}
+        {authError && (
+          <div
+            style={{
+              flexShrink: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "12px",
+              padding: "10px 20px",
+              background: "#fff3cd",
+              borderBottom: "1px solid #ffc107",
+              fontSize: "13px",
+              color: "#856404",
+            }}
+          >
+            <span>Session expired — please reload the page to re-authenticate.</span>
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                padding: "5px 14px",
+                fontSize: "12px",
+                fontWeight: 600,
+                background: "#856404",
+                color: "#fff",
+                border: "none",
+                borderRadius: "6px",
+                cursor: "pointer",
+                fontFamily: "inherit",
+                whiteSpace: "nowrap",
+              }}
+            >
+              Reload
+            </button>
+          </div>
+        )}
 
         {/* ── Body (messages + optional debug panel) ── */}
         <div style={{ flex: 1, overflow: "hidden", display: "flex" }}>

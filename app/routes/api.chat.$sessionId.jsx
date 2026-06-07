@@ -234,6 +234,11 @@ export const action = async ({ request, params }) => {
           fullText = result.text;
           agentUsage = result.usage;
         } catch (err) {
+          if (/\b401\b/.test(err.message)) {
+            send({ type: "auth_error" });
+            controller.close();
+            return;
+          }
           fullText = friendlyAIError(err) ?? `**Error:** ${err.message}`;
           send({ type: "chunk", text: fullText });
         }

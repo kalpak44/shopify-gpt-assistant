@@ -164,6 +164,25 @@ export async function listThemeFiles(shop, accessToken, themeId, prefix = null, 
 
   return prefix ? allFilenames.filter((f) => f.startsWith(prefix)) : allFilenames;
 }
+export async function writeThemeFileRest(shop, themeAccessToken, themeGid, path, content) {
+  const numericId = themeGid.split("/").pop();
+  const response = await fetch(
+    `https://${shop}/admin/api/${API_VERSION}/themes/${numericId}/assets.json`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Shopify-Access-Token": themeAccessToken,
+      },
+      body: JSON.stringify({ asset: { key: path, value: content } }),
+    }
+  );
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Theme write failed (${response.status}): ${text.slice(0, 200)}`);
+  }
+  return response.json();
+}
 
 export async function writeThemeFile(shop, accessToken, themeId, path, content) {
   const { data, errors } = await shopifyGraphql(shop, accessToken, UPSERT_THEME_FILE_MUTATION, {

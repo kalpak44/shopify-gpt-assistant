@@ -75,14 +75,15 @@ model ChangeProposal {
 }
 
 model AssistantConfig {
-  id        String   @id @default(cuid())
-  shop      String   @unique
-  provider  String   @default("openai")
-  baseUrl   String?
-  apiToken  String?
-  modelName String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+   id               String   @id @default(cuid())
+  shop             String   @unique
+  provider         String   @default("openai")
+  baseUrl          String?
+  apiToken         String?
+  modelName        String?
+  themeAccessToken String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   @@map("ThemeAssistantConfig")
 }

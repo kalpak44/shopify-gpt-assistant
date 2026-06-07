@@ -13,7 +13,7 @@ import { boundary } from "@shopify/shopify-app-react-router/server";
 import { AppProvider } from "@shopify/shopify-app-react-router/react";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
-import { readThemeFile, writeThemeFile } from "../theme.server";
+import { readThemeFile, writeThemeFile, writeThemeFileRest } from "../theme.server";
 import { runAgentLoop } from "../ai.server";
 import { Markdown } from "../markdown.jsx";
 import { getOrCreateSubscription } from "../subscription.server.js";
@@ -73,12 +73,15 @@ export const action = async ({ request, params }) => {
     const proposalId = formData.get("proposalId")?.toString();
     if (!proposalId) return { error: "Missing proposal ID." };
 
-    const proposal = await prisma.changeProposal.findFirst({
-      where: { id: proposalId, shop, sessionId },
-    });
+    const [proposal, config] = await Promise.all([
+      prisma.changeProposal.findFirst({ where: { id: proposalId, shop, sessionId } }),
+      prisma.assistantConfig.findUnique({ where: { shop } }),
+    ]);
     if (!proposal) return { error: "Proposal not found." };
     if (proposal.status !== "pending")
       return { error: `Proposal is already ${proposal.status}.` };
+
+    const themeAccessToken = config?.themeAccessToken;
 
     for (const file of proposal.files) {
       let current;
@@ -96,7 +99,11 @@ export const action = async ({ request, params }) => {
 
     for (const file of proposal.files) {
       try {
-        await writeThemeFile(shop, accessToken, proposal.themeId, file.path, file.after);
+        if (themeAccessToken) {
+          await writeThemeFileRest(shop, themeAccessToken, proposal.themeId, file.path, file.after);
+        } else {
+          await writeThemeFile(shop, accessToken, proposal.themeId, file.path, file.after);
+        }
       } catch (err) {
         const errorUserMsg = `I tried to apply the proposed change to \`${file.path}\` but it failed with this error: ${err.message}. Can you suggest an alternative approach?`;
 

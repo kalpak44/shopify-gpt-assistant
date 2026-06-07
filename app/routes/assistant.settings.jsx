@@ -12,9 +12,10 @@ export const loader = async ({ request }) => {
   const { session } = await authenticate.admin(request);
   const shop = session.shop;
 
-  const [subscription, usage] = await Promise.all([
+  const [subscription, usage, config] = await Promise.all([
     getOrCreateSubscription(shop),
     getMonthlyTokenUsage(shop),
+    prisma.assistantConfig.findUnique({ where: { shop } }),
   ]);
 
   return {
@@ -22,6 +23,7 @@ export const loader = async ({ request }) => {
     subscription,
     usage,
     debugEnabled: subscription.debugEnabled,
+    themeTokenConfigured: !!config?.themeAccessToken,
   };
 };
 
@@ -40,6 +42,16 @@ export const action = async ({ request }) => {
       data: { debugEnabled: enabled },
     });
     return { ok: true };
+  }
+
+  if (intent === "save_theme_token") {
+    const token = formData.get("themeAccessToken")?.toString().trim() || null;
+    await prisma.assistantConfig.upsert({
+      where: { shop },
+      update: { themeAccessToken: token },
+      create: { shop, themeAccessToken: token },
+    });
+    return { ok: true, savedThemeToken: true };
   }
 
   return null;
@@ -82,8 +94,14 @@ function UsageBar({ used, limit }) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AssistantSettings() {
-  const { apiKey, subscription, usage, debugEnabled } = useLoaderData();
+  const { apiKey, subscription, usage, debugEnabled, themeTokenConfigured } = useLoaderData();
   const debugFetcher = useFetcher();
+  const themeFetcher = useFetcher();
+
+  const themeSaved = themeFetcher.data?.savedThemeToken === true;
+  const themeTokenActive = themeFetcher.formData
+    ? !!themeFetcher.formData.get("themeAccessToken")?.toString().trim()
+    : themeTokenConfigured;
 
   const currentPlan = PLAN_DEFS[subscription.plan] ?? PLAN_DEFS.free;
   const tokenLimit = currentPlan.tokenLimitMonthly;
@@ -135,6 +153,90 @@ export default function AssistantSettings() {
               >
                 Manage →
               </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Theme Editing ── */}
+        <section style={{ marginBottom: "28px" }}>
+          <h2 style={{ fontSize: "11px", fontWeight: 600, margin: "0 0 14px", color: "#6d7175", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+            Theme Editing
+          </h2>
+          <div style={{ border: "1px solid #e1e3e5", borderRadius: "10px", background: "#fff", overflow: "hidden" }}>
+            {/* Setup steps */}
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid #f1f1f1", background: "#f9fafb" }}>
+              <div style={{ fontSize: "13px", fontWeight: 500, marginBottom: "10px", color: "#202223" }}>
+                How to enable theme editing
+              </div>
+              <ol style={{ margin: 0, paddingLeft: "18px", display: "flex", flexDirection: "column", gap: "6px" }}>
+                {[
+                  <>Install the <a href="https://apps.shopify.com/theme-access" target="_blank" rel="noopener noreferrer" style={{ color: "#0550ae" }}>Theme Access app</a> on your Shopify store.</>,
+                  <>Open the Theme Access app → click <strong>Create token</strong>.</>,
+                  <>Copy the token (starts with <code style={{ fontFamily: "monospace", background: "#e8f0fe", padding: "1px 4px", borderRadius: "3px" }}>shptka_</code>).</>,
+                  <>Paste it below and click <strong>Save</strong>.</>,
+                ].map((step, i) => (
+                  <li key={i} style={{ fontSize: "12px", color: "#6d7175", lineHeight: "1.5" }}>{step}</li>
+                ))}
+              </ol>
+            </div>
+
+            <div style={{ padding: "16px 20px", borderBottom: "1px solid #f1f1f1" }}>
+              <div style={{ fontSize: "14px", fontWeight: 500, marginBottom: "12px" }}>Theme Access token</div>
+              <themeFetcher.Form method="post" style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                <input type="hidden" name="intent" value="save_theme_token" />
+                <input
+                  type="password"
+                  name="themeAccessToken"
+                  placeholder={themeTokenActive ? "Token configured — paste new to replace" : "shptka_…"}
+                  autoComplete="off"
+                  style={{
+                    flex: 1,
+                    padding: "7px 10px",
+                    fontSize: "13px",
+                    fontFamily: "'SFMono-Regular', Consolas, monospace",
+                    border: "1px solid #c9cccf",
+                    borderRadius: "6px",
+                    outline: "none",
+                    color: "#202223",
+                    background: "#fff",
+                  }}
+                />
+                <button
+                  type="submit"
+                  style={{
+                    padding: "7px 16px",
+                    fontSize: "13px",
+                    fontWeight: 500,
+                    background: "#008060",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "6px",
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Save
+                </button>
+              </themeFetcher.Form>
+            </div>
+            <div style={{ padding: "10px 20px", background: "#fafbfc", display: "flex", alignItems: "center", gap: "6px" }}>
+              <span
+                style={{
+                  width: "8px",
+                  height: "8px",
+                  borderRadius: "50%",
+                  background: themeTokenActive ? "#008060" : "#c9cccf",
+                  flexShrink: 0,
+                }}
+              />
+              <span style={{ fontSize: "12px", color: "#6d7175" }}>
+                {themeSaved
+                  ? "Token saved."
+                  : themeTokenActive
+                  ? "Token configured — theme changes can be applied."
+                  : "No token — the AI can propose changes but cannot apply them."}
+              </span>
             </div>
           </div>
         </section>
@@ -192,7 +294,7 @@ export default function AssistantSettings() {
 
         {/* ── Subscription ── */}
         <section style={{ marginBottom: "28px" }}>
-          <h2 style={{ fontSize: "15px", fontWeight: 600, margin: "0 0 14px", color: "#6d7175", textTransform: "uppercase", letterSpacing: "0.04em", fontSize: "11px" }}>
+          <h2 style={{ fontWeight: 600, margin: "0 0 14px", color: "#6d7175", textTransform: "uppercase", letterSpacing: "0.04em", fontSize: "11px" }}>
             Subscription
           </h2>
 
